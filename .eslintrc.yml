@@ -1,0 +1,25 @@
+---
+parser: babel-eslint
+
+env:
+  node: true
+  jest: true
+
+plugins:
+  - jest
+  - babel
+  - lodash
+  - import
+
+extends:
+  - airbnb-base
+  - plugin:jest/recommended
+  - plugin:lodash/recommended
+  - plugin:import/errors
+  - plugin:import/warnings
+
+rules:
+  no-console: off
+  lodash/import-scope:
+    - 2
+    - member
