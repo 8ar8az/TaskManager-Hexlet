@@ -1,0 +1,40 @@
+- const heightStyle = { height: '100%' }
+
+doctype html
+html(lang='ru', style=heightStyle)
+	head
+		meta(charset='utf-8')
+		meta(name='viewport', content='width=device-width, initial-scale=1, shrink-to-fit=no')
+		title= pageTitle
+		script(src='/assets/main.js')
+	body(style=heightStyle)
+		.page-wrapper.d-flex.flex-column(style=heightStyle)
+			header
+				nav.navbar.navbar-expand-sm.navbar-dark.bg-dark
+					span.navbar-brand.mb-0.mr-sm-5.h1.font-weight-bold Менеджер задач
+					button.navbar-toggler.ml-auto(
+						type="button"
+						data-toggle="collapse"
+						data-target="#navbarToggler"
+						aria-controls="navbarToggler"
+						aria-expanded="false"
+						aria-label="Toggle navigation"
+					): span.navbar-toggler-icon
+					#navbarToggler.collapse.navbar-collapse
+						.navbar-nav
+							a.nav-item.nav-link.mx-auto.mx-sm-0(href=getNamedURL('root')) Домой
+							a.nav-item.nav-link.mx-auto.mx-sm-0.disabled(href='#', onclick='return false;') Мой центр управления
+						form.form-inline.flex-column.flex-sm-row.ml-auto
+							a.btn.btn-outline-success.mb-2.mb-sm-0(href='#', role='button') Войти
+							a.btn.btn-outline-success.ml-sm-2(href='#', role='button') Регистрация
+			main
+				block content
+			footer.mt-auto.mb-3
+				.container
+					hr
+					.d-flex.justify-content-between.footer-container
+						.contacts E-mail: 8ar8az@gmail.com
+						.copyright
+							span.font-italic &copy; 8ar8az, 2018
+							
+		

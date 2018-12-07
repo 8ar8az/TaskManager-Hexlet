@@ -11,5 +11,5 @@ export default () => {
     rollbar.configure({ enabled: false });
   }
 
-  return rollbar;
+  return rollbar.error.bind(rollbar);
 };

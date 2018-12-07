@@ -3,7 +3,7 @@ import Router from 'koa-router';
 import configuredApplication from '../src';
 import app from '../src/app';
 
-describe('Requests without errors', () => {
+describe('Routes test', () => {
   let server;
 
   beforeEach(() => {
@@ -26,12 +26,15 @@ describe('Requests without errors', () => {
   });
 });
 
-describe('Request with error', () => {
+describe('Error handling test', () => {
   const error = new Error('Oops!');
 
   const mockRouting = new Router();
   mockRouting.get('/error', () => {
     throw error;
+  });
+  mockRouting.get('/ok', (ctx) => {
+    ctx.status = 204;
   });
 
   const mockErrorReporting = jest.fn();
@@ -53,5 +56,11 @@ describe('Request with error', () => {
   test('GET-request to /error', async () => {
     await request(server).get('/error');
     expect(mockErrorReporting.mock.calls[0][0]).toBe(error);
+  });
+
+  test('GET-request to /ok', async () => {
+    const response = await request(server).get('/ok');
+    expect(response.status).toBe(204);
+    expect(mockErrorReporting.mock.calls.length).toBe(1);
   });
 });

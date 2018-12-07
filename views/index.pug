@@ -1,0 +1,26 @@
+extends /main.pug
+
+mixin feature(header, description)
+	.col.d-md-flex
+		figure.card.bg-light.my-3.text-center.w-100
+			figcaption.card-header.font-weight-bold= header
+			.card-body.d-flex
+				p.card-text.my-auto.mx-auto= description
+	.w-100.d-md-none
+
+block content
+	section.welcome.mt-3
+		.container-fuild
+			.jumbotron
+				h1.h1.text-truncate Приветствуем!
+				p.lead Рады представить вам сервис по управлению вашими задачами! Управление задачами - отличный способ получть полный контроль над своим временем!
+				hr.my-4
+				p Начните прямо сейчас, не откладывайте на потом.
+				a.btn.btn-success.btn-lg(href='#', role='button') Регистрация
+	section.our-features.mt-3
+		h3.text-center Наши преимущества
+		.container
+			.row
+				+feature('Мы стараемся!', 'Да! Мы действиетльно не равнодушны и очень стараемся. Это чистая правда!')
+				+feature('У нас есть печеньки!', 'И еще много-много всяких вкусностей!')
+				+feature('Ну и конечно же - надежность!', 'Кроме всего прочего наша система еще и чрезвычайно надежна!')
