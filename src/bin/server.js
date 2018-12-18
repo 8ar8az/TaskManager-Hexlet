@@ -1,5 +1,8 @@
-import application from '..';
+import initApplication from '..';
 
-application.listen(process.env.PORT || 5000, () => {
-  console.log('Server has been started!');
+const app = initApplication();
+app.httpServer.then((httpServer) => {
+  httpServer.start(process.env.PORT || 5000, () => {
+    console.log('Server has been started!');
+  });
 });

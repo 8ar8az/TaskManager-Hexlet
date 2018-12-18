@@ -1,0 +1,15 @@
+extends /main.pug
+
+include ../forms/user-data-form.pug
+
+block content
+  h2.text-center.mt-4= pageTitle
+  +userForm('post', getNamedURL('user', { userId: resourceOwner.id }, { query: { _method: 'put' } }))
+    if isEditableForm
+      .row
+        .col-12.col-md-9.col-lg-10.ml-auto
+          .row.justify-content-around
+            .col-12.col-md-5
+              button.btn.btn-primary.btn-block(type='submit') Обновить профиль
+            .col-12.col-md-5
+              button.btn.btn-primary.btn-block(type='submit', formaction=getNamedURL('user', { userId: resourceOwner.id }, { query: { _method: 'delete' } })) Удалить профиль

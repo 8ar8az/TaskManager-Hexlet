@@ -1,0 +1,6 @@
+extends /main.pug
+
+include ./error-message.pug
+
+block content
+  +errorMessage('К сожалению, запрашиваемый вами ресурс не найден :(')

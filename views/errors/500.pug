@@ -1,0 +1,6 @@
+extends /main.pug
+
+include ./error-message.pug
+
+block content
+  +errorMessage('Упс! На нашем сервере произошло что-то непредвиденное, попробуйте повторить действие через некоторое время.')

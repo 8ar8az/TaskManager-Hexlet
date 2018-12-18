@@ -1,0 +1,30 @@
+mixin userForm(m, url)
+  - const borderColor = _.isEmpty(errors) ? 'rgba(200, 200, 200, 0.5)' : 'rgba(255, 0, 0, 0.5)'
+
+  form.mt-3.border.rounded.p-3(action=url, method=m, style=`box-shadow: 0px 0px 3px 1px ${borderColor};`)
+    .form-group.row
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='firstname') Имя:
+      .col-12.col-md-9.col-lg-10
+        input#firstname.form-control(type='text', name='firstname', value=formData.firstname, readonly=!isEditableForm)
+    .form-group.row
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='lastname') Фамилия:
+      .col-12.col-md-9.col-lg-10
+        input#lastname.form-control(type='text', name='lastname', value=formData.lastname, readonly=!isEditableForm)
+    .form-group.row
+      - const emailError = _.find(errors, { field: 'email' });
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='email') Email:
+      .col-12.col-md-9.col-lg-10
+        input#email.form-control(type='email', name='email', value=formData.email, class={ 'is-invalid': !!emailError }, readonly=!isEditableForm)
+        if emailError
+          .invalid-feedback= emailError.message
+    if isEditableForm
+      .form-group.row
+        - const passwordError = _.find(errors, { field: 'password' });
+        label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='password') Пароль:
+        .col-12.col-md-9.col-lg-10
+          input#password.form-control(type='password', name='password', class={ 'is-invalid': !!passwordError })
+          if passwordError
+            .invalid-feedback= passwordError.message
+          else
+            small.form-text.text-muted Пароль должен быть длиной не менее 6 символов.
+    block

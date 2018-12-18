@@ -4,3 +4,4 @@ dist
 coverage
 .env
 public/assets
+__tests__/__fixtures__/db.sqlite

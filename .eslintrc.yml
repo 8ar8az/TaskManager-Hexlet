@@ -22,4 +22,4 @@ rules:
   no-console: off
   lodash/import-scope:
     - 2
-    - member
+    - full

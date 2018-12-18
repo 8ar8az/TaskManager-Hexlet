@@ -1,17 +1,15 @@
-- const heightStyle = { height: '100%' }
-
 doctype html
-html(lang='ru', style=heightStyle)
+html.h-100(lang='ru')
 	head
 		meta(charset='utf-8')
 		meta(name='viewport', content='width=device-width, initial-scale=1, shrink-to-fit=no')
-		title= pageTitle
+		title= `Менеджер задач: ${pageTitle}`
 		script(src='/assets/main.js')
-	body(style=heightStyle)
-		.page-wrapper.d-flex.flex-column(style=heightStyle)
+	body.h-100
+		.page-wrapper.d-flex.flex-column.h-100
 			header
-				nav.navbar.navbar-expand-sm.navbar-dark.bg-dark
-					span.navbar-brand.mb-0.mr-sm-5.h1.font-weight-bold Менеджер задач
+				nav.navbar.navbar-expand-md.navbar-dark.bg-dark
+					a.navbar-brand.mb-0.mr-md-5.h1.font-weight-bold(href=getNamedURL('root')) Менеджер задач
 					button.navbar-toggler.ml-auto(
 						type="button"
 						data-toggle="collapse"
@@ -22,14 +20,22 @@ html(lang='ru', style=heightStyle)
 					): span.navbar-toggler-icon
 					#navbarToggler.collapse.navbar-collapse
 						.navbar-nav
-							a.nav-item.nav-link.mx-auto.mx-sm-0(href=getNamedURL('root')) Домой
-							a.nav-item.nav-link.mx-auto.mx-sm-0.disabled(href='#', onclick='return false;') Мой центр управления
-						form.form-inline.flex-column.flex-sm-row.ml-auto
-							a.btn.btn-outline-success.mb-2.mb-sm-0(href='#', role='button') Войти
-							a.btn.btn-outline-success.ml-sm-2(href='#', role='button') Регистрация
+							- const attr = { class: !currentUser ? 'disabled' : null, href: currentUser ? getNamedURL('userProfile', { userId: currentUser.id }) : null }
+							a.nav-item.nav-link.mx-auto.mx-md-0&attributes(attr) Мои настройки
+							a.nav-item.nav-link.mx-auto.mx-md-0(href=getNamedURL('allUsers')) Пользователи
+						if currentUser
+							form.form-inline.flex-column.flex-md-row.ml-md-auto(action=getNamedURL('session', { query: { _method: 'delete' } }), method='post')
+								button.btn.btn-outline-success(type='submit') Выйти
+						else
+							form.form-inline.flex-column.flex-md-row.ml-md-auto
+								a.btn.btn-outline-success.mb-2.mb-md-0(href=getNamedURL('newSession'), role='button') Войти
+								a.btn.btn-outline-success.ml-md-2(href=getNamedURL('newUser'), role='button') Регистрация
 			main
-				block content
-			footer.mt-auto.mb-3
+				.container
+					if flash.message
+						.alert.alert-success.text-center.mb-0.mt-3(role='alert')= flash.message
+					block content
+			footer.mb-3.mt-auto
 				.container
 					hr
 					.d-flex.justify-content-between.footer-container

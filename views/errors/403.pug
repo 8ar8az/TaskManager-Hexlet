@@ -1,0 +1,6 @@
+extends /main.pug
+
+include ./error-message.pug
+
+block content
+  +errorMessage('У вас не достаточно прав для выполнения данной операции. Обратитесь к администратору.')
