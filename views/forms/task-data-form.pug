@@ -1,0 +1,39 @@
+mixin taskForm(metd, url)
+  - const borderColor = _.isEmpty(errors) ? 'rgba(200, 200, 200, 0.5)' : 'rgba(255, 0, 0, 0.5)'
+
+  form.mt-3.border.rounded.p-3(action=url, method=metd, style=`box-shadow: 0px 0px 3px 1px ${borderColor};`)
+    .form-group.row
+      - const nameError = _.find(errors, { field: 'name' });
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='name') Название:
+      .col-12.col-md-9.col-lg-10
+        input#name.form-control(type='text', name='name', value=formData.name, class={ 'is-invalid': !!nameError }, required, readonly=!isFullEditableForm)
+        if nameError
+          .invalid-feedback= nameError.message
+    .form-group.row
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='description') Описание:
+      .col-12.col-md-9.col-lg-10
+        textarea#description.form-control(rows='3', readonly=!isFullEditableForm, name='description')= formData.description
+    .form-group.row
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='assignedToId') Исполнитель:
+      .col-12.col-md-9.col-lg-10
+        select#assignedToId.form-control(name='assignedToId', disabled=!isFullEditableForm)
+          option(disabled) Выберите исполнителя
+          option(value='') Без исполнителя
+          each user in selectsMenuData.users
+            option(value=user.id, selected=(formData.assignedToId === user.id))= user.fullName
+    .form-group.row
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='statusId') Статус:
+      - const statusError = _.find(errors, { field: 'statusId' });
+      .col-12.col-md-9.col-lg-10
+        select#statusId.form-control(name='statusId', class={ 'is-invalid': !!statusError }, required)
+          option(disabled) Выберите статус
+          each status in selectsMenuData.taskStatuses
+            option(value=status.id, selected=(formData.statusId === status.id))= status.name
+        if statusError
+          .invalid-feedback= statusError.message
+    .form-group.row
+      label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='tags') Теги:
+      .col-12.col-md-9.col-lg-10
+        input#tags.form-control(type='text', name='tags', value=formData.tags, readonly=!isFullEditableForm)
+        small.form-text.text-muted Перечислите теги, связанные с задачей через запятую
+    block

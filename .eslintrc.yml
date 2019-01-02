@@ -23,3 +23,7 @@ rules:
   lodash/import-scope:
     - 2
     - full
+  lodash/chaining:
+    - 2
+    - always
+    - 3

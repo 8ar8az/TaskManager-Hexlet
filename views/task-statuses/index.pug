@@ -1,0 +1,57 @@
+extends /main.pug
+
+mixin systemTaskStatus(taskStatus)
+  .col-10.col-sm-5.mx-auto.text-center.mb-3.border.bg-dark.py-1.text-white= `«${taskStatus.name}»`
+
+mixin userTaskStatus(taskStatus)
+  .col-10.col-sm-5.mx-auto.text-center.mb-3.border.bg-light.py-1
+    if currentUser
+      - const haveErrorsOccuredWhileUpdatedStatusWithId = errors[0] && (idStatusWithErrors === taskStatus.id)
+      if haveErrorsOccuredWhileUpdatedStatusWithId
+        .text-danger.small.mb-1.text-left= errors[0].message
+      form.form-inline.justify-content-around(action=getNamedURL('taskStatus', { id: taskStatus.id }, { query: { _method: 'patch' } }), method='post')
+        label.sr-only(for='name') Название статуса задачи
+        input#name.form-control.mb-2.mb-xl-0.flex-grow-1(
+          type='text',
+          name='name',
+          class={ 'is-invalid': haveErrorsOccuredWhileUpdatedStatusWithId },
+          value=haveErrorsOccuredWhileUpdatedStatusWithId ? formData.name : taskStatus.name)
+        .buttons.d-inline-block
+          button.btn.btn-success.mx-2(type='submit') Обновить
+          button.btn.btn-danger(formaction=getNamedURL('taskStatus', { id: taskStatus.id }, { query: { _method: 'delete' } }), type='submit') Удалить
+    else
+      span= `«${taskStatus.name}»`
+
+block content
+  h2.text-center.mt-4= pageTitle
+  if currentUser
+    .row.justify-content-center
+      .col-md-9.col-lg-7.col-xl-6.col
+        - const haveErrorsOccuredWhileCreateStatus = errors[0] && !idStatusWithErrors
+        if haveErrorsOccuredWhileCreateStatus
+          .text-danger.small.mb-1.mt-2.text-left= errors[0].message
+        form.form-inline.mt-2.justify-content-center(action=getNamedURL('taskStatusesIndex'), method='post')
+          label.sr-only(for='name') Название статуса задачи
+          input#name.form-control.mb-2.mr-md-2.flex-grow-1(
+            type='text',
+            name='name',
+            placeholder='Введите название статуса задачи',
+            required,
+            class={ 'is-invalid': haveErrorsOccuredWhileCreateStatus },
+            value=haveErrorsOccuredWhileCreateStatus ? formData.name : ''
+          )
+          button.btn.btn-primary.mb-2(type='submit') Создать новый статус
+  section.system-statuses.mt-4
+    h5.text-center.border.rounded.p-2.bg-secondary.text-white.mb-3 Системные статусы задач
+    .row
+      - const systemTaskStatuses = _.filter(taskStatuses, 'isBuiltIn')
+      each taskStatus in systemTaskStatuses
+        +systemTaskStatus(taskStatus)
+  section.user-statuses.mt-4
+    h5.text-center.border.rounded.p-2.bg-info.text-white.mb-3 Пользовательские статусы задач
+    .row.align-items-center
+      - const userTaskStatuses = _.filter(taskStatuses, ['isBuiltIn', false])
+      each taskStatus in userTaskStatuses
+        +userTaskStatus(taskStatus)
+      else
+        .col.text-center Пока что в системе нет пользовательских статусов задач

@@ -1,0 +1,14 @@
+extends /tasks.pug
+
+block tasks
+  h5.text-center.border.rounded.p-2.bg-secondary.text-white.mb-3 Задачи, созданные вами
+  each task in createdTasks
+    +taskCard(task)
+  else
+    div.text-center Задачи не найдены
+  h5.text-center.border.rounded.p-2.bg-info.text-white.mb-3.mt-5 Задачи, исполняемые вами
+  each task in assignedTasks
+    +taskCard(task)
+  else
+    div.text-center Задачи не найдены
+

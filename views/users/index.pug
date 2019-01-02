@@ -10,7 +10,7 @@ mixin userCard(user)
       h6.card-subtitle.text-muted= user.email
       if isCurrentUser(user)
         p Это вы
-      a.card-link.mt-auto(href=getNamedURL('userProfile', { userId: user.id }))= isCurrentUser(user) ? 'Настройки' : 'Подробнее'
+      a.card-link.mt-auto(href=getNamedURL('usersEdit', { id: user.id }))= isCurrentUser(user) ? 'Настройки' : 'Подробнее'
 
 block content
   h2.text-center.mt-4= pageTitle

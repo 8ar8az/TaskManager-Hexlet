@@ -1,0 +1,7 @@
+extends /tasks.pug
+
+block tasks
+  each task in tasks
+    +taskCard(task)
+  else
+    div.text-center Задачи не найдены

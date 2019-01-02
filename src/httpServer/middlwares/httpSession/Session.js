@@ -1,4 +1,4 @@
-export default (sequelize, DataTypes) => sequelize.define('Sessions', {
+export default (sequelize, DataTypes) => sequelize.define('Session', {
   id: {
     type: DataTypes.STRING,
     primaryKey: true,

@@ -1,139 +1,146 @@
 import request from 'supertest';
 import initApplication from '../src';
-import logger from '../src/lib/logger';
 import initHttpServer from '../src/httpServer';
-import { generateTestUserData, createTestUser, userSingIn } from './__fixtures__/utils';
+import testHelpers from './test-helpers/test-helpers';
 
-describe('Session routes', () => {
-  let appContainer;
-  let server;
+describe("Session's routes", () => {
+  let httpServer;
   let models;
-  let cookie;
+  let router;
+
+  let sessionCookie;
   let user;
   let userPassword;
 
   beforeAll(async (done) => {
-    appContainer = initApplication();
-    server = await appContainer.httpServer;
-    models = await appContainer.models;
+    ({ httpServer, models, router } = await testHelpers.getAppComponents(initApplication()));
 
-    const userData = generateTestUserData();
-    user = await createTestUser(models.User, userData);
-    userPassword = userData.password;
+    userPassword = testHelpers.generateUserPassword();
+    user = await testHelpers.createUser(models.User, userPassword);
 
-    await server.start(() => {
+    await httpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await server.close(() => {
+    await httpServer.close(() => {
       done();
     });
   });
 
-  test('GET-request to /session/new', async () => {
-    const response = await request(server.getRequestHandler()).get('/session/new');
+  test('Get page for user sign in (create new session)', async () => {
+    const response = await request(httpServer.getRequestHandler()).get(router.url('newSession'));
     expect(response.status).toBe(200);
   });
 
-  test('POST-request to /session with incorrect email/password', async () => {
-    const newTestUserData = generateTestUserData();
-
-    const response = await request(server.getRequestHandler())
-      .post('/session')
+  test('Attempt to sign in user with incorrect combination email/password', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .post(router.url('session'))
       .type('form')
-      .send({ email: user.email, password: newTestUserData.password });
+      .send({ email: user.email, password: testHelpers.generateUserPassword() });
     expect(response.status).toBe(422);
   });
 
-  test('POST-request to /session with correct login/password', async () => {
-    const response = await request(server.getRequestHandler())
-      .post('/session')
+  test('Attempt to sign in user with correct combination email/password', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .post(router.url('session'))
       .type('form')
       .send({ email: user.email, password: userPassword });
-
-    cookie = response.header['set-cookie'];
-
     expect(response.status).toBe(303);
+
+    sessionCookie = response.header['set-cookie'];
   });
 
-  test('DELETE-request to /session', async () => {
-    const deleteSessionResponse = await request(server.getRequestHandler())
-      .delete('/session')
-      .set('Cookie', cookie);
+  test('Attempt to sign out for logged user', async () => {
+    const deleteSessionResponse = await request(httpServer.getRequestHandler())
+      .delete(router.url('session'))
+      .set('Cookie', sessionCookie);
     expect(deleteSessionResponse.status).toBe(303);
 
-    cookie = deleteSessionResponse.header['set-cookie'];
+    sessionCookie = deleteSessionResponse.header['set-cookie'];
 
-    const deleteUserResponse = await request(server.getRequestHandler())
-      .delete(`/users/${user.id}`)
-      .set('Cookie', cookie);
+    const deleteUserResponse = await request(httpServer.getRequestHandler())
+      .delete(router.url('user', { id: user.id }))
+      .set('Cookie', sessionCookie);
     expect(deleteUserResponse.status).toBe(403);
   });
 });
 
-describe('Session expiration', () => {
-  let db;
+describe("Check mechanism of session's expiration", () => {
+  let routing;
   let mockHttpServer;
+
   let user;
   let userPassword;
 
   beforeAll(async (done) => {
-    const appContainer = initApplication();
-
-    const database = await appContainer.database;
-    const models = await appContainer.models;
-    const router = await appContainer.router;
-    const sessionParseMiddleware = await appContainer.sessionParseMiddleware;
-    const sessionConfig = await appContainer.sessionConfig;
-    const reportAboutError = await appContainer.reportAboutError;
+    const {
+      database,
+      logger,
+      models,
+      router,
+      sessionParseMiddleware,
+      sessionConfig,
+      reportAboutError,
+    } = await testHelpers.getAppComponents(initApplication());
+    routing = router;
 
     const mockSessionConfig = { ...sessionConfig, maxAge: 300 };
 
-    mockHttpServer = initHttpServer({
+    const server = initHttpServer({
       router,
       logger,
       reportAboutError,
       sessionParseMiddleware,
       sessionConfig: mockSessionConfig,
     });
-    db = database;
 
-    const userData = generateTestUserData();
-    userPassword = userData.password;
-    user = await createTestUser(models.User, userData);
+    mockHttpServer = {
+      async start(...args) {
+        server.listen(...args);
+      },
+      async close(...args) {
+        await database.close();
+        server.close(...args);
+      },
+      getRequestHandler() {
+        return server;
+      },
+    };
 
-    mockHttpServer.listen(() => {
+    userPassword = testHelpers.generateUserPassword();
+    user = await testHelpers.createUser(models.User, userPassword);
+
+    await mockHttpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await db.close();
-    mockHttpServer.close(() => {
+    await mockHttpServer.close(() => {
       done();
     });
   });
 
-  test('Delete user after session expiration', async (done) => {
-    const sessionCookie = await userSingIn(mockHttpServer, user, userPassword);
+  test('Attempt to delete user after session has been expired', async (done) => {
+    const sessionCookie = await testHelpers.userSingIn(mockHttpServer, user, userPassword);
 
     setTimeout(async () => {
-      const userDeleteResponse = await request(mockHttpServer)
-        .delete(`/users/${user.id}`)
+      const userDeleteResponse = await request(mockHttpServer.getRequestHandler())
+        .delete(routing.url('user', { id: user.id }))
         .set('Cookie', sessionCookie);
       expect(userDeleteResponse.status).toBe(403);
       done();
     }, 500);
   });
 
-  test('Delete user before session expiration', async (done) => {
-    const sessionCookie = await userSingIn(mockHttpServer, user, userPassword);
+  test('Attempt to delete user before session has been expired', async (done) => {
+    const sessionCookie = await testHelpers.userSingIn(mockHttpServer, user, userPassword);
 
     setTimeout(async () => {
-      const userDeleteResponse = await request(mockHttpServer)
-        .delete(`/users/${user.id}`)
+      const userDeleteResponse = await request(mockHttpServer.getRequestHandler())
+        .delete(routing.url('user', { id: user.id }))
         .set('Cookie', sessionCookie);
       expect(userDeleteResponse.status).toBe(303);
       done();

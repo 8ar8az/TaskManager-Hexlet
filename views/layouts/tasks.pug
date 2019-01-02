@@ -1,0 +1,96 @@
+extends /main.pug
+
+mixin menuBlockForSearch(headerText)
+  li.list-group-item(class=attributes.class)
+    header= headerText
+    form.mt-1.text-right(method='get', action=getNamedURL('tasksIndex'))
+      block
+      button.btn.btn-primary.btn-sm.mt-2(type='submit') Искать
+
+mixin menuOption(id, name)
+  option(value=id)= name
+
+mixin taskCard(task)
+  - const canCurrentUserModifyTask = (task) => !!currentUser && (currentUser.equals(task.creator) || currentUser.equals(task.assignedTo));
+  .card.mb-3
+    .card-header.d-flex.justify-content-between.flex-wrap
+      h5.m-0= `Задача №${task.id}`
+      h5.m-0= task.name
+    ul.list-group.list-group-flush
+      li.list-group-item= `Описание: ${task.description}`
+      li.list-group-item
+        | Задача создана:
+        |
+        a(href=getNamedURL('userProfile', { id: task.creator.id }))= task.creator.fullName
+      li.list-group-item
+        | Исполнитель:
+        |
+        if task.assignedTo
+          a(href=getNamedURL('userProfile', { id: task.assignedTo.id }))= task.assignedTo.fullName
+      li.list-group-item
+        | Статус:
+        |
+        a(href=getNamedURL('tasksIndex', { query: { statusId: task.status.id } }))= task.status.name
+    .card-footer.border-top-0
+      .row
+        .col-12.col-lg-9
+          | Теги:
+          |
+          - let i = 0
+          while i < task.Tags.length
+            a(href=getNamedURL('tasksIndex', { query: { tag: task.Tags[i].name } }))= task.Tags[i].name
+            if (i + 1) !== task.Tags.length
+              | ,
+              |
+            - i++
+        if canCurrentUserModifyTask(task)
+          .col-12.col-lg-3.text-right
+            a.btn.btn-primary(href=getNamedURL('tasksEdit', { id: task.id })) Редактировать
+
+block content
+  -
+    const menuBlocksForSearchData = [
+      {
+        name: 'tagSearch',
+        headerText: 'Поиск по тегу',
+        class: 'list-group-item-info',
+      },
+      {
+        name: 'statusSearch',
+        headerText: 'Поиск по статусу',
+        class: 'list-group-item-secondary',
+      },
+      {
+        name: 'perfomerSearch',
+        headerText: 'Поиск по исполнителю',
+        class: 'list-group-item-warning',
+      },
+    ]
+  
+  h2.text-center.mt-4= pageTitle
+  .row.justify-content-center
+    .col-9.col-md-4.col-lg-3.mt-2
+      ul.list-group
+        a.list-group-item.list-group-item-action.list-group-item-danger(href=getNamedURL('tasksIndex')) Все задачи
+        if currentUser
+          a.list-group-item.list-group-item-action.list-group-item-success(href=getNamedURL('myTasks')) Мои задачи
+          a.list-group-item.list-group-item-action.list-group-item-primary(href=getNamedURL('newTask')) Новая задача
+        each menuBlock in menuBlocksForSearchData
+          +menuBlockForSearch(menuBlock.headerText)(class=menuBlock.class)
+            case menuBlock.name
+              when 'tagSearch'
+                input#tag.form-control.form-control-sm(type='text', name='tag', placeholder='Название тега')
+              when 'statusSearch'
+                select#statusId.form-control.form-control-sm(name='statusId')
+                  option(disabled) Выберите статус
+                  each status in selectsMenuData.taskStatuses
+                    +menuOption(status.id, status.name)
+              when 'perfomerSearch'
+                select#perfomerId.form-control.form-control-sm(name='perfomerId')
+                  option(disabled) Выберите исполнителя
+                  each user in selectsMenuData.users
+                    +menuOption(user.id, user.fullName)
+    .col-12.col-md-8.col-lg-9.mt-4
+      .row.justify-content-center
+        .col-11
+          block tasks

@@ -1,8 +1,19 @@
 import encrypt from '../../lib/secure';
-import makeRedirect from './utils/redirect';
-import renderFormErrors from './utils/form-errors-render';
+import makeRedirect from './helpers/redirect';
+import renderFormErrors from './helpers/form-errors-render';
 
-const errorMessage = 'Неверная комбинация email и пароля. Попробуйте еще раз';
+const errorMessages = {
+  signInError: 'Неверная комбинация email и пароля. Попробуйте еще раз',
+};
+
+const pageTitles = {
+  newSession: 'Вход',
+};
+
+const flashMessages = {
+  signIn: 'Вы успешно вошли в систему',
+  signOut: 'Вы успешно вышли из системы',
+};
 
 const isCorrectPassword = (password, userForAuthentication) => (
   !!userForAuthentication
@@ -19,8 +30,8 @@ export const clearSession = (ctx) => {
 
 export default (router, models, logger) => {
   router.get('newSession', '/session/new', (ctx) => {
-    const viewData = { pageTitle: 'Вход', errors: null };
-    ctx.render('user/login', viewData);
+    const viewData = { pageTitle: pageTitles.newSession, errors: [], formData: [] };
+    ctx.render('session/new', viewData);
   });
 
   router.post('session', '/session', async (ctx) => {
@@ -31,8 +42,8 @@ export default (router, models, logger) => {
 
     if (!isCorrectPassword(password, userForAuthentication)) {
       logger.mainProcessLog("%s | %s | User with email: '%s' couldn't sign in. Invalid email/password combination", ctx.method, ctx.url, email);
-      const errors = [new Error(errorMessage)];
-      renderFormErrors(ctx, errors, 'user/login', { pageTitle: 'Вход' });
+      const error = new Error(errorMessages.signInError);
+      renderFormErrors(ctx, [error], 'session/new', { pageTitle: pageTitles.newSession });
       return;
     }
 
@@ -40,21 +51,21 @@ export default (router, models, logger) => {
 
     if (userForAuthentication.isActive) {
       logger.mainProcessLog("%s | %s | User with email: '%s' successful sign in", ctx.method, ctx.url, email);
-      ctx.flash = { message: 'Вы успешно вошли в систему' };
-      makeRedirect(ctx, router.url('root'));
+      ctx.flash = { message: flashMessages.signIn };
+      makeRedirect(ctx, router.url('index'));
       return;
     }
 
     logger.mainProcessLog("%s | %s | User with email: '%s' is deleted. It can be restored", ctx.method, ctx.url, email);
-    makeRedirect(ctx, router.url('userRestoreConfirmation', { userId: userForAuthentication.id }));
+    makeRedirect(ctx, router.url('userQueryToRestore', { id: userForAuthentication.id }));
   });
 
   router.delete('/session', async (ctx) => {
     clearSession(ctx);
     logger.mainProcessLog('%s | %s | Session has been cleared', ctx.method, ctx.url);
 
-    ctx.flash = { message: 'Вы успешно вышли из системы' };
-    makeRedirect(ctx, router.url('root'));
+    ctx.flash = { message: flashMessages.signOut };
+    makeRedirect(ctx, router.url('index'));
   });
 
   return router;

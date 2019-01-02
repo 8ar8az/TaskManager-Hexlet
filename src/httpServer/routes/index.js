@@ -2,14 +2,20 @@ import Router from 'koa-router';
 import _ from 'lodash';
 import addSessionRoutes from './session';
 import addUserRoutes from './users';
+import addTaskStatusesRoutes from './task-statuses';
+import addTasksRoutes from './tasks';
 
-const addRoutesFunctions = [addSessionRoutes, addUserRoutes];
+const addRoutesFunctions = [addSessionRoutes, addUserRoutes, addTaskStatusesRoutes, addTasksRoutes];
+
+const pageTitles = {
+  index: 'Главная',
+};
 
 export default (models, logger) => {
   const router = new Router();
 
-  router.get('root', '/', (ctx) => {
-    ctx.render('index', { pageTitle: 'Главная' });
+  router.get('index', '/', (ctx) => {
+    ctx.render('index', { pageTitle: pageTitles.index });
   });
 
   _.forEach(addRoutesFunctions, (addRoutes) => {

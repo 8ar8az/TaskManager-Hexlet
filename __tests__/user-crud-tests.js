@@ -1,285 +1,318 @@
 import request from 'supertest';
 import faker from 'faker';
 import initApplication from '../src';
-import { generateTestUserData, createTestUser, userSingIn } from './__fixtures__/utils';
+import testHelpers from './test-helpers/test-helpers';
 
 faker.locale = 'ru';
 
 describe("Get user's list", () => {
-  let appContainer;
-  let server;
+  let httpServer;
+  let router;
 
   beforeAll(async (done) => {
-    appContainer = initApplication();
-    server = await appContainer.httpServer;
+    ({ httpServer, router } = await testHelpers.getAppComponents(initApplication()));
 
-    await server.start(() => {
+    await httpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await server.close(() => {
+    await httpServer.close(() => {
       done();
     });
   });
 
-  test('GET-request to /users', async () => {
-    const response = await request(server.getRequestHandler()).get('/users');
+  test("Attempt to get user's list", async () => {
+    const response = await request(httpServer.getRequestHandler()).get(router.url('usersIndex'));
     expect(response.status).toBe(200);
   });
 });
 
 describe('Create user', () => {
-  let appContainer;
-  let server;
+  let httpServer;
+  let router;
+  let models;
 
   beforeAll(async (done) => {
-    appContainer = initApplication();
-    server = await appContainer.httpServer;
+    ({ httpServer, models, router } = await testHelpers.getAppComponents(initApplication()));
 
-    await server.start(() => {
+    await httpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await server.close(() => {
+    await httpServer.close(() => {
       done();
     });
   });
 
-  test('GET-request to /users/new', async () => {
-    const response = await request(server.getRequestHandler()).get('/users/new');
+  test('Attempt to get page for create user', async () => {
+    const response = await request(httpServer.getRequestHandler()).get(router.url('newUser'));
     expect(response.status).toBe(200);
   });
 
-  test('POST-request to /users with correct body', async () => {
-    const userData = generateTestUserData();
+  test("Attempt to create user with corrent user's data", async () => {
+    const userData = testHelpers.generateUserData();
+    const userPassword = testHelpers.generateUserPassword();
 
-    const response = await request(server.getRequestHandler())
-      .post('/users')
+    const response = await request(httpServer.getRequestHandler())
+      .post(router.url('usersIndex'))
       .type('form')
-      .send(userData);
+      .send({ ...userData, password: userPassword });
     expect(response.status).toBe(303);
 
-    const models = await appContainer.models;
     const createdUser = await models.User.findOne({ where: { email: userData.email } });
 
     expect(createdUser.firstname).toBe(userData.firstname);
     expect(createdUser.lastname).toBe(userData.lastname);
   });
 
-  test('POST-request to /users with with incorrect body', async () => {
-    const userData = generateTestUserData();
+  test("Attempt to create user with incorrent user's data", async () => {
+    const userData = testHelpers.generateUserData();
+    const userPassword = testHelpers.generateUserPassword();
 
-    const response = await request(server.getRequestHandler())
-      .post('/users')
+    const response = await request(httpServer.getRequestHandler())
+      .post(router.url('usersIndex'))
       .type('form')
-      .send({ ...userData, email: 'wrongEmail' });
+      .send({ ...userData, email: 'wrongEmail', password: userPassword });
     expect(response.status).toBe(422);
+
+    const createdUser = await models.User.findOne({ where: { email: 'wrongEmail' } });
+    expect(createdUser).toBeNull();
   });
 });
 
 describe('Update user', () => {
-  let appContainer;
-  let server;
-  let user;
-  let userPassword;
+  let httpServer;
+  let router;
+  let models;
+
+  let user1;
+  let user1Password;
+  let user2;
+  let sessionCookie;
 
   beforeAll(async (done) => {
-    appContainer = initApplication();
-    server = await appContainer.httpServer;
-    const models = await appContainer.models;
+    ({ httpServer, router, models } = await testHelpers.getAppComponents(initApplication()));
 
-    const userData = generateTestUserData();
-    userPassword = userData.password;
-    user = await createTestUser(models.User, userData);
+    user1Password = testHelpers.generateUserPassword();
+    const user2Password = testHelpers.generateUserPassword();
+    [user1, user2] = await Promise.all([
+      testHelpers.createUser(models.User, user1Password),
+      testHelpers.createUser(models.User, user2Password),
+    ]);
 
-    await server.start(async () => {
+    await httpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await server.close(() => {
+    await httpServer.close(() => {
       done();
     });
   });
 
-  test('GET-request to /users/:id/edit where :id is existed', async () => {
-    const response = await request(server.getRequestHandler())
-      .get(`/users/${user.id}/edit`);
+  test("Get page with user's data which is exist", async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .get(router.url('usersEdit', { id: user1.id }));
     expect(response.status).toBe(200);
   });
 
-  test('GET-request to /users/:id/edit where :id is not existed', async () => {
-    const response = await request(server.getRequestHandler())
-      .get('/users/-99/edit');
+  test("Get page with user's data which is not exist", async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .get(router.url('usersEdit', { id: -999 }));
     expect(response.status).toBe(404);
   });
 
-  test('PUT-request to /users/:id with correct body', async () => {
-    const sessionCookie = await userSingIn(server.getRequestHandler(), user, userPassword);
+  test('Attempt to update user data without logged user', async () => {
+    const newUserData = testHelpers.generateUserData();
 
-    const newUserData = generateTestUserData();
+    const response = await request(httpServer.getRequestHandler())
+      .patch(router.url('user', { id: user1.id }))
+      .type('form')
+      .send(newUserData);
+    expect(response.status).toBe(403);
 
-    const response = await request(server.getRequestHandler())
-      .put(`/users/${user.id}`)
+    await user1.reload();
+    expect(user1.email).not.toBe(newUserData.email);
+  });
+
+  test('Attempt to update user data with logged user, but updated user is not same that logged user', async () => {
+    sessionCookie = await testHelpers.userSingIn(httpServer, user1, user1Password);
+    const newUserData = testHelpers.generateUserData();
+
+    const response = await request(httpServer.getRequestHandler())
+      .patch(router.url('user', { id: user2.id }))
+      .type('form')
+      .send(newUserData);
+    expect(response.status).toBe(403);
+
+    await user2.reload();
+    expect(user2.email).not.toBe(newUserData.email);
+  });
+
+  test('Attempt to update user data with logged user and correct form data', async () => {
+    const newUserData = testHelpers.generateUserData();
+
+    const response = await request(httpServer.getRequestHandler())
+      .patch(router.url('user', { id: user1.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send(newUserData);
     expect(response.status).toBe(303);
 
-    await user.reload();
-    userPassword = newUserData.password;
-
-    expect(user.email).toBe(newUserData.email);
+    await user1.reload();
+    expect(user1.email).toBe(newUserData.email);
   });
 
-  test('PUT-request to /users/:id with incorrect body', async () => {
-    const sessionCookie = await userSingIn(server.getRequestHandler(), user, userPassword);
+  test('Attempt to update user data with logged user and incorrect form data', async () => {
+    const newUserData = testHelpers.generateUserData();
 
-    const newUserData = generateTestUserData();
-
-    const response = await request(server.getRequestHandler())
-      .put(`/users/${user.id}`)
+    const response = await request(httpServer.getRequestHandler())
+      .patch(router.url('user', { id: user1.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send({ ...newUserData, email: 'wrongEmail' });
     expect(response.status).toBe(422);
 
-    await user.reload();
-
-    expect(user.email).not.toBe(newUserData.email);
-  });
-
-  test('PUT-request for user without session', async () => {
-    const newUserData = generateTestUserData();
-
-    const response = await request(server.getRequestHandler())
-      .put(`/users/${user.id}`)
-      .type('form')
-      .send(newUserData);
-    expect(response.status).toBe(403);
-
-    await user.reload();
-    expect(user.email).not.toBe(newUserData.email);
+    await user1.reload();
+    expect(user1.email).not.toBe(newUserData.email);
   });
 });
 
 describe('Delete user', () => {
-  let appContainer;
-  let server;
-  let user;
-  let userPassword;
+  let httpServer;
+  let router;
+  let models;
+
+  let user1;
+  let user1Password;
+  let user2;
+  let sessionCookie;
 
   beforeAll(async (done) => {
-    appContainer = initApplication();
-    server = await appContainer.httpServer;
-    const models = await appContainer.models;
+    ({ httpServer, router, models } = await testHelpers.getAppComponents(initApplication()));
 
-    const userData = generateTestUserData();
-    userPassword = userData.password;
-    user = await createTestUser(models.User, userData);
+    user1Password = testHelpers.generateUserPassword();
+    const user2Password = testHelpers.generateUserPassword();
+    [user1, user2] = await Promise.all([
+      testHelpers.createUser(models.User, user1Password),
+      testHelpers.createUser(models.User, user2Password),
+    ]);
 
-    await server.start(async () => {
+    await httpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await server.close(() => {
+    await httpServer.close(() => {
       done();
     });
   });
 
-  test('DELETE-request to /users/:id where :id is not exist', async () => {
-    const response = await request(server.getRequestHandler())
-      .delete('/users/-999');
+  test('Attempt to delete user which is not exist', async () => {
+    sessionCookie = await testHelpers.userSingIn(httpServer, user1, user1Password);
+
+    const response = await request(httpServer.getRequestHandler())
+      .delete(router.url('user', { id: -999 }))
+      .set('Cookie', sessionCookie);
     expect(response.status).toBe(404);
   });
 
-  test('DELETE-request for user without session', async () => {
-    const response = await request(server.getRequestHandler())
-      .delete(`/users/${user.id}`);
+  test('Attempt to delete user without logged user', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .delete(router.url('user', { id: user1.id }));
     expect(response.status).toBe(403);
 
-    await user.reload();
-    expect(user.status).toBe('active');
+    await user1.reload();
+    expect(user1.isActive).toBeTruthy();
   });
 
-  test('DELETE-request to /users/:id where :id is exist', async () => {
-    const sessionCookie = await userSingIn(server.getRequestHandler(), user, userPassword);
+  test('Attempt to delete user data with logged user, but deleted user is not same that logged user', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .delete(router.url('user', { id: user2.id }))
+      .set('Cookie', sessionCookie);
+    expect(response.status).toBe(403);
 
-    const response = await request(server.getRequestHandler())
-      .delete(`/users/${user.id}`)
+    await user2.reload();
+    expect(user2.isActive).toBeTruthy();
+  });
+
+  test('Attempt to delete user with logged user', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .delete(router.url('user', { id: user1.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(303);
 
-    await user.reload();
-    expect(user.status).toBe('deleted');
+    const user = await models.User.scope(['deleted']).findOne({ where: { email: user1.email } });
+    expect(user.isActive).toBeFalsy();
   });
 });
 
 describe('Restore deleted user', () => {
-  let appContainer;
-  let server;
+  let httpServer;
+  let router;
+  let models;
+
   let user;
   let userPassword;
 
   beforeAll(async (done) => {
-    appContainer = initApplication();
-    server = await appContainer.httpServer;
-    const models = await appContainer.models;
+    ({ httpServer, router, models } = await testHelpers.getAppComponents(initApplication()));
 
-    const userData = generateTestUserData();
-    user = await createTestUser(models.User, userData);
-    userPassword = userData.password;
+    userPassword = testHelpers.generateUserPassword();
+    user = await testHelpers.createUser(models.User, userPassword);
 
     user.delete();
     await user.save();
 
-    await server.start(() => {
+    await httpServer.start(() => {
       done();
     });
   });
 
   afterAll(async (done) => {
-    await server.close(() => {
+    await httpServer.close(() => {
       done();
     });
   });
 
-  test('Get data for deleted user', async () => {
-    const response = await request(server.getRequestHandler()).get(`/users/${user.id}/edit`);
+  test('Appempt to get user profile for deleted user', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .get(router.url('usersEdit', { id: user.id }));
     expect(response.status).toBe(404);
   });
 
-  test('Get /users/deleted/:id/restore without preliminary authentication', async () => {
-    const response = await request(server.getRequestHandler()).get(`/users/deleted/${user.id}/restore`);
+  test("Attempt to get user's restore page without authentication", async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .get(router.url('userQueryToRestore', { id: user.id }));
     expect(response.status).toBe(403);
   });
 
-  test('Restore user without preliminary authentication', async () => {
-    const response = await request(server.getRequestHandler()).patch(`/users/deleted/${user.id}`);
+  test('Attempt to restore user without preliminary authentication', async () => {
+    const response = await request(httpServer.getRequestHandler())
+      .patch(router.url('userRestore', { id: user.id }));
     expect(response.status).toBe(403);
   });
 
-  test('Restore user with authentication', async () => {
-    const sessionCookie = await userSingIn(server.getRequestHandler(), user, userPassword);
+  test('Attempt to restore user with authentication', async () => {
+    const sessionCookie = await testHelpers.userSingIn(httpServer, user, userPassword);
 
-    const pageWithRestoreConfirmationResponse = await request(server.getRequestHandler())
-      .get(`/users/deleted/${user.id}/restore`)
+    const pageWithRestoreConfirmationResponse = await request(httpServer.getRequestHandler())
+      .get(router.url('userQueryToRestore', { id: user.id }))
       .set('Cookie', sessionCookie);
     expect(pageWithRestoreConfirmationResponse.status).toBe(200);
 
-    const userRestoreResponse = await request(server.getRequestHandler())
-      .patch(`/users/deleted/${user.id}`)
+    const userRestoreResponse = await request(httpServer.getRequestHandler())
+      .patch(router.url('userRestore', { id: user.id }))
       .set('Cookie', sessionCookie);
     expect(userRestoreResponse.status).toBe(303);
 
     await user.reload();
-    expect(user.status).toBe('active');
+    expect(user.isActive).toBeTruthy();
   });
 });

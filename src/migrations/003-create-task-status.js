@@ -1,30 +1,23 @@
+import _ from 'lodash';
+import { systemTaskStatuses } from '../models/TaskStatus';
+
 export default {
   up: async (queryInterface, DataTypes) => {
-    await queryInterface.createTable('Users', {
+    await queryInterface.createTable('TaskStatuses', {
       id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
       },
-      firstname: {
+      name: {
         type: DataTypes.STRING,
-      },
-      lastname: {
-        type: DataTypes.STRING,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
         unique: true,
+        allowNull: false,
       },
       isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-      },
-      passwordHash: {
-        type: DataTypes.STRING,
-        allowNull: false,
       },
       createdAt: {
         type: DataTypes.DATE,
@@ -35,6 +28,13 @@ export default {
         allowNull: false,
       },
     });
+
+    const systemTaskStatusesRows = _.map(
+      systemTaskStatuses,
+      name => ({ name, createdAt: new Date(), updatedAt: new Date() }),
+    );
+
+    await queryInterface.bulkInsert('TaskStatuses', systemTaskStatusesRows);
   },
-  down: queryInterface => queryInterface.dropTable('Users'),
+  down: queryInterface => queryInterface.dropTable('TaskStatuses'),
 };

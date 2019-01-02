@@ -1,50 +1,39 @@
-import makeRedirect from './utils/redirect';
-import renderFormErrors from './utils/form-errors-render';
+import makeRedirect from './helpers/redirect';
+import renderFormErrors from './helpers/form-errors-render';
+import checkResourceIsExistAndGetInstance from '../middlwares/resource-exist-check';
+import checkUserPermission, { isSameUser } from '../middlwares/check-user-permission';
 import { userSignIn, clearSession } from './session';
 
-const newUserPageTitle = 'Регистрация нового пользователя';
+const pageTitles = {
+  index: 'Список пользователей',
+  newUser: 'Регистрация нового пользователя',
+  myProfile: 'Мои профиль',
+  userProfile: userName => `Профиль пользователя '${userName}'`,
+  restoreUser: 'Восстановление аккаунта',
+};
 
-const canUserModifyResource = (resourceOwner, user) => (!!user && (user.id === resourceOwner.id));
+const flashMessages = {
+  createdUser: email => `Пользователь с email: '${email}' успешно создан и вы автоматически вошли в систему`,
+  updatedUser: 'Ваши данные успешно обновлены',
+  deletedUser: email => `Пользователь с email: '${email}' успешно удален из системы`,
+  restoredUser: email => `Пользователь с email: '${email}' успешно восстановлен в системе. Вы можете аутентифицироваться`,
+};
 
 export default (router, models, logger) => {
-  const checkUserResourceIsExistAndGetOwner = usersScope => async (ctx, next) => {
-    const { userId } = ctx.params;
-    const userForRequestedResource = await usersScope.findById(userId);
-    if (!userForRequestedResource) {
-      logger.mainProcessLog("%s | %s | User-resource with id: '%s' is not exist", ctx.method, ctx.url, userId);
-      ctx.throw(404);
-    }
-
-    ctx.state.resourceOwner = userForRequestedResource;
-    logger.mainProcessLog("%s | %s | User-resource with id: '%s' is found. Owner for resource:\n%O", ctx.method, ctx.url, userId, userForRequestedResource.get());
-    await next();
-  };
-
-  const checkUserPermissionForResource = userType => async (ctx, next) => {
-    const userForCheckPermission = ctx.state[userType];
-    if (!canUserModifyResource(ctx.state.resourceOwner, userForCheckPermission)) {
-      logger.mainProcessLog("%s | %s | User %o don't have permission for interact with requested resource", ctx.method, ctx.url, userForCheckPermission ? userForCheckPermission.get() : null);
-      ctx.throw(403);
-    }
-
-    logger.mainProcessLog('%s | %s | User %o can interact with requested resource', ctx.method, ctx.url, userForCheckPermission.get());
-    await next();
-  };
-
-  router.get('allUsers', '/users', async (ctx) => {
-    const usersList = await models.User.scope('active').findAll();
-    const viewData = { pageTitle: 'Список пользователей', usersList };
-    ctx.render('user/users-list', viewData);
+  router.get('usersIndex', '/users', async (ctx) => {
+    const usersList = await models.User.findAll();
+    const viewData = { pageTitle: pageTitles.index, usersList };
+    ctx.render('users/index', viewData);
   });
 
   router.get('newUser', '/users/new', (ctx) => {
     const viewData = {
-      pageTitle: newUserPageTitle,
+      pageTitle: pageTitles.newUser,
       errors: [],
       formData: {},
       isEditableForm: true,
     };
-    ctx.render('user/user-registration', viewData);
+    ctx.render('users/new', viewData);
   });
 
   router.post('/users', async (ctx) => {
@@ -57,8 +46,8 @@ export default (router, models, logger) => {
     } catch (err) {
       if (err instanceof newUser.sequelize.ValidationError) {
         logger.mainProcessLog("%s | %s | User with email: '%s' has not been created. Form data is invalid", ctx.method, ctx.url, email);
-        const viewData = { pageTitle: newUserPageTitle, isEditableForm: true };
-        renderFormErrors(ctx, err.errors, 'user/user-registration', viewData);
+        const viewData = { pageTitle: pageTitles.newUser, isEditableForm: true };
+        renderFormErrors(ctx, err.errors, 'users/new', viewData);
         return;
       }
       throw err;
@@ -66,97 +55,101 @@ export default (router, models, logger) => {
 
     userSignIn(ctx, newUser);
     logger.mainProcessLog("%s | %s | User with email: '%s' has been created", ctx.method, ctx.url, email);
-    ctx.flash = { message: `Пользователь с email: '${newUser.email}' был успешно создан и вы автоматически вошли в систему под этим аккаунтом` };
-    makeRedirect(ctx, router.url('root'));
+    ctx.flash = { message: flashMessages.createdUser(newUser.email) };
+    makeRedirect(ctx, router.url('index'));
   });
 
   router.get(
-    'userProfile',
-    '/users/:userId/edit',
-    checkUserResourceIsExistAndGetOwner(models.User.scope('active')),
+    'usersEdit',
+    '/users/:id/edit',
+    checkResourceIsExistAndGetInstance(models.User.scope('active'), logger),
     async (ctx) => {
       const viewData = {
-        pageTitle: canUserModifyResource(ctx.state.resourceOwner, ctx.state.currentUser) ? 'Мои настройки' : `Профиль пользователя ${ctx.state.resourceOwner.fullName}`,
+        pageTitle: isSameUser(ctx.state.currentUser, ctx.state.resourceInstance)
+          ? pageTitles.myProfile : pageTitles.userProfile(ctx.state.resourceInstance.fullName),
         errors: [],
-        formData: ctx.state.resourceOwner.get(),
-        isEditableForm: canUserModifyResource(ctx.state.resourceOwner, ctx.state.currentUser),
+        formData: ctx.state.resourceInstance.get(),
+        isEditableForm: isSameUser(
+          ctx.state.currentUser,
+          ctx.state.resourceInstance,
+        ),
       };
-      ctx.render('user/user-profile', viewData);
+      ctx.render('users/edit', viewData);
     },
   );
 
-  router.put(
+  router.patch(
     'user',
-    '/users/:userId',
-    checkUserResourceIsExistAndGetOwner(models.User.scope('active')),
-    checkUserPermissionForResource('currentUser'),
+    '/users/:id',
+    checkResourceIsExistAndGetInstance(models.User.scope('active'), logger),
+    checkUserPermission('user', 'PATCH', logger),
     async (ctx) => {
-      logger.mainProcessLog('%s | %s | Updating user:\n%O', ctx.method, ctx.url, ctx.state.resourceOwner.get());
+      logger.mainProcessLog('%s | %s | Updating user:\n%O', ctx.method, ctx.url, ctx.state.resourceInstance.get());
       try {
-        await ctx.state.resourceOwner.update(ctx.request.body);
+        await ctx.state.resourceInstance.update(ctx.request.body);
       } catch (err) {
-        if (err instanceof ctx.state.resourceOwner.sequelize.ValidationError) {
-          logger.mainProcessLog('%s | %s | User %o has not been updated. Form data is invalid', ctx.method, ctx.url, ctx.state.resourceOwner.get());
+        if (err instanceof ctx.state.resourceInstance.sequelize.ValidationError) {
+          logger.mainProcessLog('%s | %s | User %o has not been updated. Form data is invalid', ctx.method, ctx.url, ctx.state.resourceInstance.get());
           const viewData = {
-            pageTitle: 'Мои настройки',
+            pageTitle: pageTitles.myProfile,
             isEditableForm: true,
           };
-          renderFormErrors(ctx, err.errors, 'user/user-profile', viewData);
+          renderFormErrors(ctx, err.errors, 'users/edit', viewData);
           return;
         }
         throw err;
       }
 
-      await ctx.state.resourceOwner.reload();
-      logger.mainProcessLog('%s | %s | User %o has been updated', ctx.method, ctx.url, ctx.state.resourceOwner.get());
-      ctx.flash = { message: 'Данные пользователя успешно обновлены' };
-      makeRedirect(ctx, router.url('userProfile', { userId: ctx.state.resourceOwner.id }));
+      await ctx.state.resourceInstance.reload();
+      logger.mainProcessLog('%s | %s | User %o has been updated', ctx.method, ctx.url, ctx.state.resourceInstance.get());
+      ctx.flash = { message: flashMessages.updatedUser };
+      makeRedirect(ctx, router.url('usersEdit', { id: ctx.state.resourceInstance.id }));
     },
   );
 
   router.delete(
-    '/users/:userId',
-    checkUserResourceIsExistAndGetOwner(models.User.scope('active')),
-    checkUserPermissionForResource('currentUser'),
+    '/users/:id',
+    checkResourceIsExistAndGetInstance(models.User.scope('active'), logger),
+    checkUserPermission('user', 'DELETE', logger),
     async (ctx) => {
-      logger.mainProcessLog('%s | %s | Deleting user:\n%O', ctx.method, ctx.url, ctx.state.resourceOwner.get());
-      ctx.state.resourceOwner.delete();
-      await ctx.state.resourceOwner.save();
+      logger.mainProcessLog('%s | %s | Deleting user:\n%O', ctx.method, ctx.url, ctx.state.resourceInstance.get());
+      ctx.state.resourceInstance.delete();
+      await ctx.state.resourceInstance.save();
 
       clearSession(ctx);
 
       logger.mainProcessLog('%s | %s | User has been updated. Session was cleared', ctx.method, ctx.url);
-      ctx.flash = { message: `Пользователь с email: '${ctx.state.resourceOwner.email}' успешно удален из системы` };
-      makeRedirect(ctx, router.url('root'));
+      ctx.flash = { message: flashMessages.deletedUser(ctx.state.resourceInstance.email) };
+      makeRedirect(ctx, router.url('index'));
     },
   );
 
   router.get(
-    'userRestoreConfirmation',
-    '/users/deleted/:userId/restore',
-    checkUserResourceIsExistAndGetOwner(models.User.scope('deleted')),
-    checkUserPermissionForResource('userForRestore'),
+    'userQueryToRestore',
+    '/users/deleted/:id/restore',
+    checkResourceIsExistAndGetInstance(models.User.scope('deleted'), logger),
+    checkUserPermission('userRestoreQuery', 'GET', logger),
     async (ctx) => {
-      const viewData = { pageTitle: 'Восстановление аккаунта' };
-      ctx.render('user/user-restore', viewData);
+      const viewData = { pageTitle: pageTitles.restoreUser };
+      ctx.render('users/query-to-restore', viewData);
     },
   );
 
   router.patch(
     'userRestore',
-    '/users/deleted/:userId',
-    checkUserResourceIsExistAndGetOwner(models.User.scope('deleted')),
-    checkUserPermissionForResource('userForRestore'),
+    '/users/deleted/:id',
+    checkResourceIsExistAndGetInstance(models.User.scope('deleted'), logger),
+    checkUserPermission('userRestore', 'PATCH', logger),
     async (ctx) => {
-      logger.mainProcessLog('%s | %s | Restoring user:\n%O', ctx.method, ctx.url, ctx.state.resourceOwner.get());
-      ctx.state.resourceOwner.restore();
-      await ctx.state.resourceOwner.save();
+      logger.mainProcessLog('%s | %s | Restoring user:\n%O', ctx.method, ctx.url, ctx.state.resourceInstance.get());
+      ctx.state.resourceInstance.restore();
+      await ctx.state.resourceInstance.save();
 
       clearSession(ctx);
 
       logger.mainProcessLog('%s | %s | User has been restored. Session was cleared', ctx.method, ctx.url);
-      ctx.flash = { message: `Пользователь с email: '${ctx.state.resourceOwner.email}' успешно восстановлен в системе. Вы можете аутентифицироваться` };
-      makeRedirect(ctx, router.url('root'));
+      ctx.flash = { message: flashMessages.restoredUser(ctx.state.resourceInstance.email) };
+      makeRedirect(ctx, router.url('index'));
     },
   );
 };

@@ -4,7 +4,7 @@ include ../forms/user-data-form.pug
 
 block content
   h2.text-center.mt-4= pageTitle
-  +userForm('post', getNamedURL('allUsers'))
+  +userForm('post', getNamedURL('usersIndex'))
     .row
       .col-12.col-md-9.col-lg-10.ml-auto
         button.btn.btn-primary.btn-block(type='submit') Зарегистрироваться

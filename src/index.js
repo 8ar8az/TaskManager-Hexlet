@@ -26,15 +26,14 @@ export default () => {
     const databaseConfig = dbConfig[process.env.NODE_ENV];
     logger.initializationLog('Connecting to database with configuration:\n%O', databaseConfig);
 
-    const databaseArgs = _.compact([
-      process.env.DATABASE_URL,
+    const sequelize = new Sequelize(
+      databaseConfig.database_url,
       { ...databaseConfig, logging: (log) => { logger.databaseLog(log); } },
-    ]);
-
-    const sequelize = new Sequelize(...databaseArgs);
+    );
     logger.initializationLog('Database is connected. Executing migrations...');
 
     const umzug = getUmzug(sequelize);
+
     const executedMigrations = await umzug.up();
     logger.initializationLog('Migrations have been executed: %o', _.map(executedMigrations, 'file'));
 
@@ -53,10 +52,17 @@ export default () => {
       const { name } = path.parse(file);
       const pathToModel = path.resolve(pathToModels, name);
       const model = database.import(pathToModel);
-
       return { ...acc, [name]: model };
     }, {});
-    logger.initializationLog('ORM models have been init: %o', _.keys(models));
+    logger.initializationLog('ORM models have been init: %o', modelsFiles);
+
+    models.TaskStatus.defaultValue = await models.TaskStatus.findOne({ where: { name: 'Новая' } });
+    logger.initializationLog('Defaults values for ORM models have been init');
+
+    _.forEach(models, (model) => {
+      model.associate(models);
+    });
+    logger.initializationLog('ORM models have been associated each other');
 
     return models;
   });
@@ -112,8 +118,9 @@ export default () => {
     logger.initializationLog('Task-manager has been loading');
 
     const httpServer = {
-      start(...args) {
+      async start(...args) {
         logger.mainProcessLog('Task-manager is starting...');
+        await database.sync();
         server.listen(...args);
       },
       async close(...args) {

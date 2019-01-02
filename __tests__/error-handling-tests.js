@@ -1,14 +1,18 @@
 import request from 'supertest';
 import Router from 'koa-router';
+import initApplication from '../src';
 import initHttpServer from '../src/httpServer';
-import logger from '../src/lib/logger';
-
-const error = new Error('Ooops!');
-const mockReportAboutError = jest.fn();
+import testHelpers from './test-helpers/test-helpers';
 
 let httpServer;
+let mockReportAboutError;
+let error;
 
-beforeAll((done) => {
+beforeAll(async (done) => {
+  error = new Error('Ooops!');
+
+  mockReportAboutError = jest.fn();
+
   const mockRouter = new Router();
   mockRouter.get('/error', () => {
     throw error;
@@ -17,15 +21,12 @@ beforeAll((done) => {
     ctx.status = 204;
   });
 
-  const mockSessionParseMiddleware = async (ctx, next) => {
-    ctx.state.flash = ctx.flash;
-    await next();
-  };
+  const { logger, sessionParseMiddleware } = await testHelpers.getAppComponents(initApplication());
 
   const httpServerConfig = {
     router: mockRouter,
     reportAboutError: mockReportAboutError,
-    sessionParseMiddleware: mockSessionParseMiddleware,
+    sessionParseMiddleware,
     logger,
   };
 

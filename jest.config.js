@@ -3,6 +3,6 @@ module.exports = {
   coverageReporters: ['lcov'],
   collectCoverageFrom: ['src/**/*.js'],
   testEnvironment: 'node',
-  testPathIgnorePatterns: ['/__fixtures__/'],
-  // testMatch: ['**/__tests__/error-handling-tests.js'],
+  testPathIgnorePatterns: ['__tests__/test-helpers'],
+  // testMatch: ['**/__tests__/user-crud-tests.js'],
 };
