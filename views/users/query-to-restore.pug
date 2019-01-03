@@ -3,8 +3,8 @@ extends /main.pug
 block content
   .restore-message.mx-auto.mt-5.w-75
     h2.text-center= pageTitle
-    p.text-center Аккаунт пользователя с email: '#{userForRestore.email}' ранее был удален, однако, вы можете его восстановить. Восстанавливаем?
-    form(method='post', action=getNamedURL('userRestore', { id: userForRestore.id }, { query: { _method: 'patch' } }))
+    p.text-center Аккаунт пользователя с email: '#{restorableUser.email}' ранее был удален, однако, вы можете его восстановить. Восстанавливаем?
+    form(method='post', action=getNamedURL('userRestore', { id: restorableUser.id }, { query: { _method: 'patch' } }))
       .d-flex.justify-content-around
         button.btn.btn-primary(type='submit') Восстановить
-        a.btn.btn-danger(href=getNamedURL('root'), role='button') Отказаться
+        a.btn.btn-danger(href=getNamedURL('index'), role='button') Отказаться

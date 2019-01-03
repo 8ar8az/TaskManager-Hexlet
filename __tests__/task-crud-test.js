@@ -212,7 +212,7 @@ describe('Modify a task', () => {
   });
 
   test('Get page for a modify task without a logged user', async () => {
-    const response = await request(httpServer.getRequestHandler()).get(router.url('tasksEdit', { id: task1.id }));
+    const response = await request(httpServer.getRequestHandler()).get(router.url('taskProfile', { id: task1.id }));
     expect(response.status).toBe(403);
   });
 
@@ -220,7 +220,7 @@ describe('Modify a task', () => {
     const cookie = await testHelpers.userSingIn(httpServer, user2, user2Password);
 
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('tasksEdit', { id: task1.id }))
+      .get(router.url('taskProfile', { id: task1.id }))
       .set('Cookie', cookie);
     expect(response.status).toBe(200);
   });
@@ -229,7 +229,7 @@ describe('Modify a task', () => {
     const cookie = await testHelpers.userSingIn(httpServer, user3, user3Password);
 
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('tasksEdit', { id: task1.id }))
+      .get(router.url('taskProfile', { id: task1.id }))
       .set('Cookie', cookie);
     expect(response.status).toBe(403);
   });
@@ -238,7 +238,7 @@ describe('Modify a task', () => {
     sessionCookie = await testHelpers.userSingIn(httpServer, user1, user1Password);
 
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('tasksEdit', { id: task1.id }))
+      .get(router.url('taskProfile', { id: task1.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(200);
   });
@@ -247,7 +247,7 @@ describe('Modify a task', () => {
     const newTaskData = generateTaskData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: -999 }))
+      .patch(router.url('taskProfile', { id: -999 }))
       .set('Cookie', sessionCookie)
       .type('form')
       .send(newTaskData);
@@ -258,7 +258,7 @@ describe('Modify a task', () => {
     const newTaskData = generateTaskData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: task1.id }))
+      .patch(router.url('taskProfile', { id: task1.id }))
       .type('form')
       .send(newTaskData);
     expect(response.status).toBe(403);
@@ -272,7 +272,7 @@ describe('Modify a task', () => {
     const newTaskData = generateTaskData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: task1.id }))
+      .patch(router.url('taskProfile', { id: task1.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send({ ...newTaskData, statusId: taskStatusWork.id });
@@ -292,7 +292,7 @@ describe('Modify a task', () => {
     const newTaskData = generateTaskData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: task1.id }))
+      .patch(router.url('taskProfile', { id: task1.id }))
       .type('form')
       .set('Cookie', cookie)
       .send({ ...newTaskData, statusId: taskStatusTest.id });
@@ -310,7 +310,7 @@ describe('Modify a task', () => {
     const newTaskData = generateTaskData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: task2.id }))
+      .patch(router.url('taskProfile', { id: task2.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send(newTaskData);
@@ -323,7 +323,7 @@ describe('Modify a task', () => {
 
   test('Attempt to modify a task with logged creator and incorrect data', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: task1.id }))
+      .patch(router.url('taskProfile', { id: task1.id }))
       .set('Cookie', sessionCookie)
       .type('form')
       .send({ name: null });
@@ -390,38 +390,35 @@ describe('Delete a task', () => {
     sessionCookie = await testHelpers.userSingIn(httpServer, user1, user1Password);
 
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('task', { id: -999 }))
+      .delete(router.url('taskProfile', { id: -999 }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(404);
   });
 
   test('Attempt to delete a task without a logged user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('task', { id: task1.id }));
+      .delete(router.url('taskProfile', { id: task1.id }));
     expect(response.status).toBe(403);
 
     await task1.reload();
-    expect(task1.isActive).toBeTruthy();
+    expect(task1).toBeDefined();
   });
 
   test('Attempt to delete a task with a logged user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('task', { id: task1.id }))
+      .delete(router.url('taskProfile', { id: task1.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(303);
-
-    await task1.reload();
-    expect(task1.isActive).toBeFalsy();
   });
 
   test('Attempt to delete a task is created by another user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('task', { id: task2.id }))
+      .delete(router.url('taskProfile', { id: task2.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(403);
 
     await task2.reload();
-    expect(task2.isActive).toBeTruthy();
+    expect(task2).toBeDefined();
   });
 });
 
@@ -500,7 +497,7 @@ describe('Create and modify task with tags', () => {
     const tagsString = 'рога,        ';
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('task', { id: task.id }))
+      .patch(router.url('taskProfile', { id: task.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send({ tags: tagsString });

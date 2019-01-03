@@ -2,17 +2,8 @@ import encrypt from '../../lib/secure';
 import makeRedirect from './helpers/redirect';
 import renderFormErrors from './helpers/form-errors-render';
 
-const errorMessages = {
-  signInError: 'Неверная комбинация email и пароля. Попробуйте еще раз',
-};
-
 const pageTitles = {
   newSession: 'Вход',
-};
-
-const flashMessages = {
-  signIn: 'Вы успешно вошли в систему',
-  signOut: 'Вы успешно вышли из системы',
 };
 
 const isCorrectPassword = (password, userForAuthentication) => (
@@ -42,7 +33,7 @@ export default (router, models, logger) => {
 
     if (!isCorrectPassword(password, userForAuthentication)) {
       logger.mainProcessLog("%s | %s | User with email: '%s' couldn't sign in. Invalid email/password combination", ctx.method, ctx.url, email);
-      const error = new Error(errorMessages.signInError);
+      const error = new Error('Неверная комбинация email и пароля. Попробуйте еще раз');
       renderFormErrors(ctx, [error], 'session/new', { pageTitle: pageTitles.newSession });
       return;
     }
@@ -51,7 +42,7 @@ export default (router, models, logger) => {
 
     if (userForAuthentication.isActive) {
       logger.mainProcessLog("%s | %s | User with email: '%s' successful sign in", ctx.method, ctx.url, email);
-      ctx.flash = { message: flashMessages.signIn };
+      ctx.flash = { message: 'Вы успешно вошли в систему' };
       makeRedirect(ctx, router.url('index'));
       return;
     }
@@ -64,7 +55,7 @@ export default (router, models, logger) => {
     clearSession(ctx);
     logger.mainProcessLog('%s | %s | Session has been cleared', ctx.method, ctx.url);
 
-    ctx.flash = { message: flashMessages.signOut };
+    ctx.flash = { message: 'Вы успешно вышли из системы' };
     makeRedirect(ctx, router.url('index'));
   });
 

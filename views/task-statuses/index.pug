@@ -6,7 +6,7 @@ mixin systemTaskStatus(taskStatus)
 mixin userTaskStatus(taskStatus)
   .col-10.col-sm-5.mx-auto.text-center.mb-3.border.bg-light.py-1
     if currentUser
-      - const haveErrorsOccuredWhileUpdatedStatusWithId = errors[0] && (idStatusWithErrors === taskStatus.id)
+      - const haveErrorsOccuredWhileUpdatedStatusWithId = errors[0] && (taskStatusIdWithErrors === taskStatus.id)
       if haveErrorsOccuredWhileUpdatedStatusWithId
         .text-danger.small.mb-1.text-left= errors[0].message
       form.form-inline.justify-content-around(action=getNamedURL('taskStatus', { id: taskStatus.id }, { query: { _method: 'patch' } }), method='post')
@@ -27,7 +27,7 @@ block content
   if currentUser
     .row.justify-content-center
       .col-md-9.col-lg-7.col-xl-6.col
-        - const haveErrorsOccuredWhileCreateStatus = errors[0] && !idStatusWithErrors
+        - const haveErrorsOccuredWhileCreateStatus = errors[0] && !taskStatusIdWithErrors
         if haveErrorsOccuredWhileCreateStatus
           .text-danger.small.mb-1.mt-2.text-left= errors[0].message
         form.form-inline.mt-2.justify-content-center(action=getNamedURL('taskStatusesIndex'), method='post')

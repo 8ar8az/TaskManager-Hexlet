@@ -24,11 +24,6 @@ export default {
       assignedToId: {
         type: DataTypes.INTEGER,
       },
-      isActive: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true,
-      },
       createdAt: {
         type: DataTypes.DATE,
         allowNull: false,

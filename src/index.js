@@ -119,14 +119,14 @@ export default () => {
 
     const httpServer = {
       async start(...args) {
-        logger.mainProcessLog('Task-manager is starting...');
         await database.sync();
         server.listen(...args);
+        logger.mainProcessLog('Task-manager has been started');
       },
       async close(...args) {
-        logger.mainProcessLog('Task-manager is closing...');
         await database.close();
         server.close(...args);
+        logger.mainProcessLog('Task-manager has been closed');
       },
       getRequestHandler() {
         return server;

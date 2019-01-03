@@ -7,9 +7,6 @@ mixin menuBlockForSearch(headerText)
       block
       button.btn.btn-primary.btn-sm.mt-2(type='submit') Искать
 
-mixin menuOption(id, name)
-  option(value=id)= name
-
 mixin taskCard(task)
   - const canCurrentUserModifyTask = (task) => !!currentUser && (currentUser.equals(task.creator) || currentUser.equals(task.assignedTo));
   .card.mb-3
@@ -38,14 +35,14 @@ mixin taskCard(task)
           |
           - let i = 0
           while i < task.Tags.length
-            a(href=getNamedURL('tasksIndex', { query: { tag: task.Tags[i].name } }))= task.Tags[i].name
+            a(href=getNamedURL('tasksIndex', { query: { tagName: task.Tags[i].name } }))= task.Tags[i].name
             if (i + 1) !== task.Tags.length
               | ,
               |
             - i++
         if canCurrentUserModifyTask(task)
           .col-12.col-lg-3.text-right
-            a.btn.btn-primary(href=getNamedURL('tasksEdit', { id: task.id })) Редактировать
+            a.btn.btn-primary(href=getNamedURL('taskProfile', { id: task.id })) Редактировать
 
 block content
   -
@@ -79,17 +76,17 @@ block content
           +menuBlockForSearch(menuBlock.headerText)(class=menuBlock.class)
             case menuBlock.name
               when 'tagSearch'
-                input#tag.form-control.form-control-sm(type='text', name='tag', placeholder='Название тега')
+                input#tagName.form-control.form-control-sm(type='text', name='tagName', placeholder='Название тега')
               when 'statusSearch'
                 select#statusId.form-control.form-control-sm(name='statusId')
                   option(disabled) Выберите статус
-                  each status in selectsMenuData.taskStatuses
-                    +menuOption(status.id, status.name)
+                  each status in taskStatuses
+                    option(value=status.id)= status.name
               when 'perfomerSearch'
-                select#perfomerId.form-control.form-control-sm(name='perfomerId')
+                select#assignedToId.form-control.form-control-sm(name='assignedToId')
                   option(disabled) Выберите исполнителя
-                  each user in selectsMenuData.users
-                    +menuOption(user.id, user.fullName)
+                  each user in users
+                    option(value=user.id)= user.fullName
     .col-12.col-md-8.col-lg-9.mt-4
       .row.justify-content-center
         .col-11

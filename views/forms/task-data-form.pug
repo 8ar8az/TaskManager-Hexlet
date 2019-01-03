@@ -6,20 +6,20 @@ mixin taskForm(metd, url)
       - const nameError = _.find(errors, { field: 'name' });
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='name') Название:
       .col-12.col-md-9.col-lg-10
-        input#name.form-control(type='text', name='name', value=formData.name, class={ 'is-invalid': !!nameError }, required, readonly=!isFullEditableForm)
+        input#name.form-control(type='text', name='name', value=formData.name, class={ 'is-invalid': !!nameError }, required, readonly=!fullEditPermission)
         if nameError
           .invalid-feedback= nameError.message
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='description') Описание:
       .col-12.col-md-9.col-lg-10
-        textarea#description.form-control(rows='3', readonly=!isFullEditableForm, name='description')= formData.description
+        textarea#description.form-control(rows='3', readonly=!fullEditPermission, name='description')= formData.description
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='assignedToId') Исполнитель:
       .col-12.col-md-9.col-lg-10
-        select#assignedToId.form-control(name='assignedToId', disabled=!isFullEditableForm)
+        select#assignedToId.form-control(name='assignedToId', disabled=!fullEditPermission)
           option(disabled) Выберите исполнителя
           option(value='') Без исполнителя
-          each user in selectsMenuData.users
+          each user in users
             option(value=user.id, selected=(formData.assignedToId === user.id))= user.fullName
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='statusId') Статус:
@@ -27,13 +27,13 @@ mixin taskForm(metd, url)
       .col-12.col-md-9.col-lg-10
         select#statusId.form-control(name='statusId', class={ 'is-invalid': !!statusError }, required)
           option(disabled) Выберите статус
-          each status in selectsMenuData.taskStatuses
+          each status in taskStatuses
             option(value=status.id, selected=(formData.statusId === status.id))= status.name
         if statusError
           .invalid-feedback= statusError.message
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='tags') Теги:
       .col-12.col-md-9.col-lg-10
-        input#tags.form-control(type='text', name='tags', value=formData.tags, readonly=!isFullEditableForm)
+        input#tags.form-control(type='text', name='tags', value=formData.tags, readonly=!fullEditPermission)
         small.form-text.text-muted Перечислите теги, связанные с задачей через запятую
     block

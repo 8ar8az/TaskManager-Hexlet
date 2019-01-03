@@ -20,7 +20,7 @@ html.h-100(lang='ru')
 					): span.navbar-toggler-icon
 					#navbarToggler.collapse.navbar-collapse
 						.navbar-nav
-							- const attr = { class: !currentUser ? 'disabled' : null, href: currentUser ? getNamedURL('usersEdit', { id: currentUser.id }) : null }
+							- const attr = { class: !currentUser ? 'disabled' : null, href: currentUser ? getNamedURL('userProfile', { id: currentUser.id }) : null }
 							a.nav-item.nav-link.mx-auto.mx-md-0&attributes(attr) Мои настройки
 							a.nav-item.nav-link.mx-auto.mx-md-0(href=getNamedURL('usersIndex')) Пользователи
 							li.nav-item.dropdown.mx-auto.mx-md-0

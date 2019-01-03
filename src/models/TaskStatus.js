@@ -19,43 +19,13 @@ export default (sequelize, DataTypes) => {
         },
       },
     },
-    isActive: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    },
   }, {
     getterMethods: {
       isBuiltIn() {
         return _.includes(systemTaskStatuses, this.getDataValue('name'));
       },
     },
-    scopes: {
-      deleted: {
-        where: {
-          isActive: {
-            [sequelize.constructor.Op.eq]: false,
-          },
-        },
-      },
-      active: {
-        where: {
-          isActive: {
-            [sequelize.constructor.Op.eq]: true,
-          },
-        },
-      },
-    },
   });
-
-  TaskStatus.prototype.delete = function del() {
-    this.isActive = false;
-  };
-
-  TaskStatus.prototype.restore = function restore() {
-    this.isActive = true;
-  };
-
 
   TaskStatus.associate = (models) => {
     TaskStatus.hasMany(models.Task, { as: 'tasks', foreignKey: 'statusId' });

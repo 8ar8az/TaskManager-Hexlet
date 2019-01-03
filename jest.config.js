@@ -4,5 +4,5 @@ module.exports = {
   collectCoverageFrom: ['src/**/*.js'],
   testEnvironment: 'node',
   testPathIgnorePatterns: ['__tests__/test-helpers'],
-  // testMatch: ['**/__tests__/user-crud-tests.js'],
+  // testMatch: ['**/__tests__/task-status-crud-tests.js'],
 };

@@ -5,19 +5,19 @@ mixin userForm(m, url)
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='firstname') Имя:
       .col-12.col-md-9.col-lg-10
-        input#firstname.form-control(type='text', name='firstname', value=formData.firstname, readonly=!isEditableForm)
+        input#firstname.form-control(type='text', name='firstname', value=formData.firstname, readonly=!editPermission)
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='lastname') Фамилия:
       .col-12.col-md-9.col-lg-10
-        input#lastname.form-control(type='text', name='lastname', value=formData.lastname, readonly=!isEditableForm)
+        input#lastname.form-control(type='text', name='lastname', value=formData.lastname, readonly=!editPermission)
     .form-group.row
       - const emailError = _.find(errors, { field: 'email' });
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='email') Email:
       .col-12.col-md-9.col-lg-10
-        input#email.form-control(type='email', name='email', value=formData.email, class={ 'is-invalid': !!emailError }, readonly=!isEditableForm)
+        input#email.form-control(type='email', name='email', value=formData.email, class={ 'is-invalid': !!emailError }, readonly=!editPermission)
         if emailError
           .invalid-feedback= emailError.message
-    if isEditableForm
+    if editPermission
       .form-group.row
         - const passwordError = _.find(errors, { field: 'password' });
         label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='password') Пароль:

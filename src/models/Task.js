@@ -17,11 +17,6 @@ export default (sequelize, DataTypes) => {
     description: {
       type: DataTypes.TEXT,
     },
-    isActive: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    },
   }, {
     validate: {
       statusId() {
@@ -30,32 +25,7 @@ export default (sequelize, DataTypes) => {
         }
       },
     },
-    scopes: {
-      deleted: {
-        where: {
-          isActive: {
-            [sequelize.constructor.Op.eq]: false,
-          },
-        },
-      },
-      active: {
-        where: {
-          isActive: {
-            [sequelize.constructor.Op.eq]: true,
-          },
-        },
-      },
-    },
   });
-
-  Task.prototype.delete = function del() {
-    this.isActive = false;
-  };
-
-  Task.prototype.restore = function restore() {
-    this.isActive = true;
-  };
-
 
   Task.associate = (models) => {
     Task.belongsTo(models.TaskStatus, { as: 'status' });

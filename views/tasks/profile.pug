@@ -4,15 +4,15 @@ include ../forms/task-data-form.pug
 
 block content
   h2.text-center.mt-4= pageTitle
-  +taskForm('post', getNamedURL('task', { id: resourceInstance.id }, { query: { _method: 'patch' } }))
+  +taskForm('post', getNamedURL('taskProfile', { id: requestedTask.id }, { query: { _method: 'patch' } }))
     .row
       .col-12.col-md-9.col-lg-10.ml-auto
-        if isFullEditableForm
+        if fullEditPermission
           .row.justify-content-around
             .col-12.col-md-5.mb-1
               button.btn.btn-primary.btn-block(type='submit') Сохранить изменения
             .col-12.col-md-5.mb-1
-              button.btn.btn-danger.btn-block(type='submit', formaction=getNamedURL('task', { id: resourceInstance.id }, { query: { _method: 'delete' } })) Удалить
+              button.btn.btn-danger.btn-block(type='submit', formaction=getNamedURL('taskProfile', { id: requestedTask.id }, { query: { _method: 'delete' } })) Удалить
         else
           button.btn.btn-primary.btn-block(type='submit') Сохранить изменения
           

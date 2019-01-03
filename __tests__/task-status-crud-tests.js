@@ -193,7 +193,6 @@ describe("Delete task's status", () => {
 
   let taskStatus;
   let task;
-  let task2;
 
   beforeAll(async (done) => {
     ({ httpServer, router, models } = await testHelpers.getAppComponents(initApplication()));
@@ -207,15 +206,6 @@ describe("Delete task's status", () => {
       name: 'Task',
       statusId: taskStatus.id,
     });
-
-    task2 = await models.Task.create({
-      creatorId: user.id,
-      name: 'Task',
-      statusId: taskStatus.id,
-    });
-
-    task2.delete();
-    await task2.save();
 
     await httpServer.start(() => {
       done();
@@ -240,7 +230,7 @@ describe("Delete task's status", () => {
     expect(response.status).toBe(403);
 
     await taskStatus.reload();
-    expect(taskStatus.isActive).toBeTruthy();
+    expect(taskStatus).toBeDefined();
   });
 
   test("Attempt to delete task's status which linked with active task", async () => {
@@ -252,32 +242,16 @@ describe("Delete task's status", () => {
     expect(response.status).toBe(424);
 
     await taskStatus.reload();
-    expect(taskStatus.isActive).toBeTruthy();
+    expect(taskStatus).toBeDefined();
   });
 
   test("Attempt to delete task's status with logged user", async () => {
-    task.delete();
-    await task.save();
+    await task.destroy();
 
     const response = await request(httpServer.getRequestHandler())
       .delete(router.url('taskStatus', { id: taskStatus.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(303);
-
-    await taskStatus.reload();
-    expect(taskStatus.isActive).toBeFalsy();
-  });
-
-  test("Attempt to create task's status with name which already exist at deleted task's status", async () => {
-    const response = await request(httpServer.getRequestHandler())
-      .post(router.url('taskStatusesIndex'))
-      .type('form')
-      .set('Cookie', sessionCookie)
-      .send({ name: taskStatus.name });
-    expect(response.status).toBe(303);
-
-    await taskStatus.reload();
-    expect(taskStatus.isActive).toBeTruthy();
   });
 });
 
@@ -333,6 +307,6 @@ describe("Modify the system's task statuses", () => {
     expect(response.status).toBe(403);
 
     await systemTaskStatus.reload();
-    expect(systemTaskStatus.isActive).toBeTruthy();
+    expect(systemTaskStatus).toBeDefined();
   });
 });

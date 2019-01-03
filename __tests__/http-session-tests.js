@@ -61,7 +61,7 @@ describe("Session's routes", () => {
     sessionCookie = deleteSessionResponse.header['set-cookie'];
 
     const deleteUserResponse = await request(httpServer.getRequestHandler())
-      .delete(router.url('user', { id: user.id }))
+      .delete(router.url('userProfile', { id: user.id }))
       .set('Cookie', sessionCookie);
     expect(deleteUserResponse.status).toBe(403);
   });
@@ -128,7 +128,7 @@ describe("Check mechanism of session's expiration", () => {
 
     setTimeout(async () => {
       const userDeleteResponse = await request(mockHttpServer.getRequestHandler())
-        .delete(routing.url('user', { id: user.id }))
+        .delete(routing.url('userProfile', { id: user.id }))
         .set('Cookie', sessionCookie);
       expect(userDeleteResponse.status).toBe(403);
       done();
@@ -140,7 +140,7 @@ describe("Check mechanism of session's expiration", () => {
 
     setTimeout(async () => {
       const userDeleteResponse = await request(mockHttpServer.getRequestHandler())
-        .delete(routing.url('user', { id: user.id }))
+        .delete(routing.url('userProfile', { id: user.id }))
         .set('Cookie', sessionCookie);
       expect(userDeleteResponse.status).toBe(303);
       done();

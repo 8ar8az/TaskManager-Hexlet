@@ -16,7 +16,7 @@ export default (models, logger) => {
       ctx.state.currentUser = user;
       logger.mainProcessLog('%s | %s | Current user for session:\n%O', ctx.method, ctx.url, user.get());
     } else {
-      ctx.state.userForRestore = user;
+      ctx.state.restorableUser = user;
       logger.mainProcessLog('%s | %s | Restorable user for session:\n%O', ctx.method, ctx.url, user.get());
     }
 
