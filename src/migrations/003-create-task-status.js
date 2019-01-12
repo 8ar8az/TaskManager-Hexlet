@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { systemTaskStatuses } from '../models/TaskStatus';
+import getI18next from '../lib/i18next';
 
 export default {
   up: async (queryInterface, DataTypes) => {
@@ -14,6 +14,11 @@ export default {
         unique: true,
         allowNull: false,
       },
+      isBuiltIn: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       createdAt: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -24,9 +29,23 @@ export default {
       },
     });
 
+    const i18next = await getI18next();
+
+    const systemTaskStatuses = [
+      i18next.t('common:systemTaskStatuses.new'),
+      i18next.t('common:systemTaskStatuses.work'),
+      i18next.t('common:systemTaskStatuses.test'),
+      i18next.t('common:systemTaskStatuses.finish'),
+    ];
+
     const systemTaskStatusesRows = _.map(
       systemTaskStatuses,
-      name => ({ name, createdAt: new Date(), updatedAt: new Date() }),
+      name => ({
+        name,
+        isBuiltIn: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
     );
 
     await queryInterface.bulkInsert('TaskStatuses', systemTaskStatusesRows);

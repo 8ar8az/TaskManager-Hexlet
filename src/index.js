@@ -1,132 +1,123 @@
 import Bottle from 'bottlejs';
 import Sequelize from 'sequelize';
 import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
 import _ from 'lodash';
+
+import modelsInitializators from './models';
 import getRollbarReporting from './lib/rollbar';
-import appLogger from './lib/logger';
+import getI18next from './lib/i18next';
+import logger from './lib/logger';
 import dbConfig from './config/config';
 import initHttpServer from './httpServer';
-import getSessioParseMiddleware from './httpServer/middlwares/session-parse';
 import getRouter from './httpServer/routes';
 import getSessionConfig from './httpServer/middlwares/httpSession/session-config';
 import getUmzug from './lib/umzug';
 
-dotenv.config();
+dotenv.config({ debug: true });
 
 export default () => {
-  appLogger.initializationLog('Task-manager server is loading...');
+  logger.log('Task-manager server is loading...');
 
   const bottle = new Bottle();
 
-  bottle.constant('logger', appLogger);
+  bottle.constant('logger', logger);
 
-  bottle.factory('database', async ({ logger }) => {
+  bottle.factory('i18next', async () => getI18next());
+
+  bottle.factory('sequelize', async () => {
     const databaseConfig = dbConfig[process.env.NODE_ENV];
-    logger.initializationLog('Connecting to database with configuration:\n%O', databaseConfig);
+    logger.log('Connecting to database with config:\n%O', databaseConfig);
 
     const sequelize = new Sequelize(
       databaseConfig.database_url,
-      { ...databaseConfig, logging: (log) => { logger.databaseLog(log); } },
+      { ...databaseConfig, logging: (log) => { logger.dbLog(log); } },
     );
-    logger.initializationLog('Database is connected. Executing migrations...');
+    logger.log('Database is connected. Executing migrations...');
 
     const umzug = getUmzug(sequelize);
-
     const executedMigrations = await umzug.up();
-    logger.initializationLog('Migrations have been executed: %o', _.map(executedMigrations, 'file'));
+
+    logger.log('Migrations have been executed: %o', _.map(executedMigrations, 'file'));
 
     return sequelize;
   });
 
   bottle.factory('models', async (container) => {
-    const { logger } = container;
-    const database = await container.database;
-    logger.initializationLog('ORM models is initializing...');
+    const sequelize = await container.sequelize;
+    const i18next = await container.i18next;
+    logger.log('ORM models is initializing...');
 
-    const pathToModels = path.resolve(__dirname, 'models');
-    const modelsFiles = fs.readdirSync(pathToModels);
-
-    const models = _.reduce(modelsFiles, (acc, file) => {
-      const { name } = path.parse(file);
-      const pathToModel = path.resolve(pathToModels, name);
-      const model = database.import(pathToModel);
-      return { ...acc, [name]: model };
+    const models = _.reduce(_.keys(modelsInitializators), (acc, modelName) => {
+      const modelInitializator = modelsInitializators[modelName];
+      const model = sequelize.import(modelName, modelInitializator(i18next));
+      return { ...acc, [modelName]: model };
     }, {});
-    logger.initializationLog('ORM models have been init: %o', modelsFiles);
 
-    models.TaskStatus.defaultValue = await models.TaskStatus.findOne({ where: { name: 'Новая' } });
-    logger.initializationLog('Defaults values for ORM models have been init');
+    logger.log('ORM models have been init: %o', _.keys(models));
+
+    models.TaskStatus.defaultValue = await models.TaskStatus.findOne({ where: { name: i18next.t('common:systemTaskStatuses.new') } });
+    logger.log("Default value for task's status ORM model has been init");
 
     _.forEach(models, (model) => {
       model.associate(models);
     });
-    logger.initializationLog('ORM models have been associated each other');
+    logger.log('ORM models have been associated each other');
 
     return models;
   });
 
-  bottle.factory('sessionConfig', async (container) => {
-    const { logger } = container;
-    const database = await container.database;
-    logger.initializationLog("User's HTTP-session module is initializing...");
+  bottle.factory('httpSessionConfig', async (container) => {
+    const sequelize = await container.sequelize;
+    logger.log('HTTP-session config is forming...');
 
-    return getSessionConfig(database, logger);
+    return getSessionConfig(sequelize, logger);
   });
 
-  bottle.factory('reportAboutError', ({ logger }) => {
-    logger.initializationLog('Error reporter is initializing...');
-
-    return getRollbarReporting(logger);
-  });
-
-  bottle.factory('sessionParseMiddleware', async (container) => {
-    const { logger } = container;
-    const models = await container.models;
-    logger.initializationLog('Session parsing middleware is initializing...');
-
-    return getSessioParseMiddleware(models, logger);
+  bottle.factory('errorReporting', () => {
+    logger.log('Error reporter has been init');
+    return getRollbarReporting();
   });
 
   bottle.factory('router', async (container) => {
-    const { logger } = container;
     const models = await container.models;
-    logger.initializationLog('HTTP-routes is initializing...');
+    logger.log('HTTP-routes is initializing...');
 
     return getRouter(models, logger);
   });
 
   bottle.factory('httpServer', async (container) => {
-    const database = await container.database;
+    const sequelize = await container.sequelize;
+    const models = await container.models;
     const router = await container.router;
-    const sessionConfig = await container.sessionConfig;
-    const sessionParseMiddleware = await container.sessionParseMiddleware;
-    const { logger, reportAboutError } = container;
+    const httpSessionConfig = await container.httpSessionConfig;
+    const i18next = await container.i18next;
+    const { errorReporting } = container;
 
-    logger.initializationLog('HTTP-server is initializing...');
+    logger.log('HTTP-server is initializing...');
 
     const server = initHttpServer({
-      logger,
       router,
-      sessionConfig,
-      sessionParseMiddleware,
-      reportAboutError,
+      sequelize,
+      models,
+      httpSessionConfig,
+      errorReporting,
+      logger,
+      i18next,
     });
 
-    logger.initializationLog('HTTP-server has been successful init');
-    logger.initializationLog('Task-manager has been loading');
+    logger.log('HTTP-server has been successful init');
+    logger.log('Task-manager has been loading');
 
     const httpServer = {
       async start(...args) {
-        await database.sync();
+        await sequelize.sync();
         server.listen(...args);
-        logger.mainProcessLog('Task-manager has been started');
+        logger.log('Task-manager has been started');
       },
       async close(...args) {
-        await database.close();
+        await sequelize.close();
         server.close(...args);
-        logger.mainProcessLog('Task-manager has been closed');
+        logger.log('Task-manager has been closed');
       },
       getRequestHandler() {
         return server;

@@ -1,0 +1,9 @@
+---
+
+redirect: Перенаправление на {{url}}
+
+systemTaskStatuses:
+  new: Новая
+  work: В работе
+  test: На тестировании
+  finish: Завершена

@@ -1,6 +1,6 @@
 import encrypt from '../lib/secure';
 
-export default (sequelize, DataTypes) => {
+export default i18next => (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
       type: DataTypes.INTEGER,
@@ -19,10 +19,10 @@ export default (sequelize, DataTypes) => {
       unique: true,
       validate: {
         isEmail: {
-          msg: 'Необходимо указать email в формате example@example.com',
+          msg: i18next.t('validation:User.email.isEmail'),
         },
         notEmpty: {
-          msg: 'Email должен быть указан',
+          msg: i18next.t('validation:User.email.notEmpty'),
         },
       },
     },
@@ -47,7 +47,7 @@ export default (sequelize, DataTypes) => {
       validate: {
         is: {
           args: /[\S]{6,}/,
-          msg: 'Пароль должен состоять не менее чем из 6 символов и не содержать пробелов',
+          msg: i18next.t('validation:User.password.is'),
         },
       },
     },

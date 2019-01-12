@@ -16,6 +16,7 @@ export default {
     define: {
       timestamps: true,
     },
+    logging: false,
   },
   production: {
     database_url: process.env.DATABASE_URL,

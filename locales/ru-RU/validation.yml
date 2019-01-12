@@ -1,0 +1,25 @@
+---
+
+User:
+  email:
+    isEmail: Необходимо указать email в формате example@example.com
+    notEmpty: Email обязательно должен быть указан
+    unique: "Email: $t(validation:common.unique, { {{error}} })"
+  password:
+    is: Пароль должен состоять не менее чем из 6 символов и не содержать пробелов
+TaskStatus:
+  name:
+    notEmpty: Название статуса задачи не может быть пустым
+    unique: "Название статуса задачи: $t(validation:common.unique, { {{error}} })"
+  delete:
+    linkedWithTasks: С данным статусом имеются связанные задачи. Сначала смените статус в этих задачах
+Task:
+  name:
+    notEmpty: Название задачи не может быть пустым
+    unique: "Название задачи: $t(validation:common.unique, { {{error}} })"
+  statusId:
+    notEmpty: Должен быть указан статус задачи
+Session:
+  email-password-combination: Неверная комбинация email и пароля. Попробуйте еще раз
+common:
+  unique: "'{{error.value}}' уже существует в системе"

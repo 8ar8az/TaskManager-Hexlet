@@ -1,15 +1,6 @@
 import debug from 'debug';
 
-const databaseLog = debug('task-manager:db');
-const initializationLog = debug('task-manager:init');
-const httpSessionLog = debug('task-manager:http-session');
-const errorReportingLog = debug('task-manager:error-reporter');
-const mainProcessLog = debug('task-manager:main-process');
+const log = debug('task-manager:main');
+const dbLog = debug('task-manager:db');
 
-export default {
-  databaseLog,
-  initializationLog,
-  httpSessionLog,
-  errorReportingLog,
-  mainProcessLog,
-};
+export default { log, dbLog };

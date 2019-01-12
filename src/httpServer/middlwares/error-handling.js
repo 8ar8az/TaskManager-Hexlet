@@ -1,19 +1,17 @@
-const errorMessages = {
-  404: 'Ресурс не найден',
-  403: 'Отсутствует доступ',
-  500: 'Что-то пошло не так',
-};
-
-export default logger => async (ctx, next) => {
+export default (sequelize, errorReporting, logger) => async (ctx, next) => {
   try {
     await next();
   } catch (err) {
+    if (err instanceof sequelize.EmptyResultError) {
+      err.status = 404;
+    }
+
     if (!err.status) {
-      logger.mainProcessLog('%s | %s | Error occured:\n%O', ctx.method, ctx.url, err);
-      ctx.app.emit('error', err, ctx);
+      logger.log('Error has been occured:\n%O', err);
+      errorReporting(err, ctx.request);
     }
 
     ctx.status = err.status || 500;
-    ctx.render(`errors/${ctx.status}`, { pageTitle: errorMessages[ctx.status] });
+    ctx.render(`errors/${ctx.status}`, { pageTitle: ctx.t(`page-titles:errors.${ctx.status}`) });
   }
 };

@@ -1,32 +1,19 @@
 import _ from 'lodash';
-import checkUserPermissions from './helpers/check-user-permission';
 import makeRedirect from './helpers/redirect';
 import renderFormErrors from './helpers/form-errors-render';
+import getAuthorizationMiddleware, { isUserCreatorForTask } from '../middlwares/authtorization';
 
-const pageTitles = {
-  index: 'Центр управления задачами',
-  myTasks: 'Мои задачи',
-  newTask: 'Создание новой задачи',
-  editTask: 'Редактирование задачи',
-};
+export default (router, models) => {
+  const getRequestedTaskMiddleware = async (ctx, next) => {
+    ctx.task = await models.Task.findByPk(
+      ctx.params.id,
+      { include: [{ all: true }], rejectOnEmpty: true },
+    );
 
-export default (router, models, logger) => {
-  const findRequestedTask = async (ctx) => {
-    const { id } = ctx.params;
-
-    logger.mainProcessLog("%s | %s | Find requested task with id: '%s'", ctx.method, ctx.url, id);
-
-    const requestedTask = await models.Task.findByPk(id, { include: [{ all: true }] });
-    if (!requestedTask) {
-      logger.mainProcessLog("%s | %s | Requested task with id: '%s' has not been found", ctx.method, ctx.url, id);
-      ctx.throw(404);
-    }
-
-    return requestedTask;
+    await next();
   };
 
   const setTagsForTask = async (tagsString, task) => {
-    logger.mainProcessLog("Parse string of tags: '%s' for task with name: '%s'", tagsString, task.name);
     const tagNames = _(tagsString)
       .split(',')
       .map(_.trim)
@@ -34,113 +21,51 @@ export default (router, models, logger) => {
       .uniq()
       .value();
 
-    const alreadyExistTags = await models.Tag.findAll({ where: { name: tagNames } });
-    const alreadyExistTagsNames = _.map(alreadyExistTags, 'name');
-    logger.mainProcessLog('Tags which already exist: %o', alreadyExistTagsNames);
+    await task.sequelize.transaction(async (t) => {
+      const alreadyExistTags = await models.Tag.findAll({
+        where: { name: tagNames },
+        transaction: t,
+      });
 
-    const tagNamesForCreating = _.difference(tagNames, alreadyExistTagsNames);
-    await models.Tag.bulkCreate(_.map(tagNamesForCreating, name => ({ name })));
-    const createdTags = await models.Tag.findAll({ where: { name: tagNamesForCreating } });
-    logger.mainProcessLog('Tags which created now: %o', _.map(createdTags, 'name'));
+      const alreadyExistTagsNames = _.map(alreadyExistTags, 'name');
+      const tagNamesForCreating = _.difference(tagNames, alreadyExistTagsNames);
 
-    await task.setTags([...alreadyExistTags, ...createdTags]);
+      const createdTags = await models.Tag.bulkCreate(
+        _.map(tagNamesForCreating, name => ({ name })),
+        { transaction: t },
+      );
+
+      await task.setTags([...alreadyExistTags, ...createdTags], { transaction: t });
+    });
   };
 
   router.get('tasksIndex', '/tasks', async (ctx) => {
-  /*     const gettersOfFilteredTasks = [
-      {
-        check: query => !!query.tagName,
-        getFilteredTasks: async ({ tagName }) => {
-          const tag = await models.Tag.findOne({ where: { name: tagName } });
-          const tasks = tag ? await tag.getTasks({
-            include: [{ all: true }],
-          }) : [];
-          return tasks;
+    const { tagName, statusId, assignedToId } = ctx.query;
+    const filteredTasks = await models.Task.findAll({
+      include: [
+        {
+          model: models.Tag,
+          where: tagName ? { name: tagName } : null,
         },
-        getPageTitle: ({ tagName }) => pageTitles.filteredByTag(tagName),
-      },
-      {
-        check: query => !!query.statusId,
-        getFilteredTasks: async ({ statusId }) => {
-          const status = await models.TaskStatus.findByPk(statusId);
-          const tasks = status ? await status.getTasks({
-            include: [{ all: true }],
-          }) : [];
-          return tasks;
+        {
+          model: models.TaskStatus,
+          as: 'status',
+          where: statusId ? { id: statusId } : null,
         },
-        getPageTitle: async ({ statusId }) => {
-          const status = await models.TaskStatus.findByPk(statusId);
-          return pageTitles.filteredByStatus(status.name);
+        {
+          model: models.User,
+          as: 'assignedTo',
+          where: assignedToId ? { id: assignedToId } : null,
         },
-      },
-      {
-        check: query => !!query.perfomerId,
-        getFilteredTasks: async ({ perfomerId }) => {
-          const perfomer = await models.User.findByPk(perfomerId);
-          const tasks = perfomer ? await perfomer.getAssignedTasks({
-            include: [{ all: true }],
-          }) : [];
-          return tasks;
-        },
-        getPageTitle: async ({ perfomerId }) => {
-          const perfomer = await models.User.findByPk(perfomerId);
-          return pageTitles.filteredByPerfomer(perfomer.fullName);
-        },
-      },
-      {
-        check: _.constant(true),
-        getFilteredTasks: async () => {
-          const tasks = await models.Task.findAll({ include: [{ all: true }] });
-          return tasks;
-        },
-        getPageTitle: _.constant(pageTitles.index),
-      },
-    ];
-
-    const { getFilteredTasks, getPageTitle } = _.find(
-      gettersOfFilteredTasks,
-      getter => getter.check(ctx.query),
-    );
-
-    const tasks = await getFilteredTasks(ctx.query);
-    const pageTitle = await getPageTitle(ctx.query);
- */
-
-    const { tagName: tagNameQuery, ...statusIdAndAssignedToIdQuery } = ctx.query;
-
-    let tasks;
-    if (tagNameQuery) {
-      const tagForFilter = await models.Tag.findOne({ where: { name: tagNameQuery } });
-      tasks = await tagForFilter.getTasks({
-        where: statusIdAndAssignedToIdQuery,
-        include: [{ all: true }],
-      });
-    } else {
-      tasks = await models.Task.findAll({
-        where: statusIdAndAssignedToIdQuery,
-        include: [{ all: true }],
-      });
-    }
-
-    const queryStatus = await models.TaskStatus.findByPk(statusIdAndAssignedToIdQuery.statusId);
-    const queryAssignedTo = await models.User.findByPk(statusIdAndAssignedToIdQuery.assignedToId);
-
-    const pageTitlePartForTagFiltration = tagNameQuery ? `тег: '${tagNameQuery}'` : '';
-    const pageTitlePartForStatusFiltration = statusIdAndAssignedToIdQuery.statusId ? `статус задачи: '${queryStatus.name}'` : '';
-    const pageTitlePartForAssignedToFiltration = statusIdAndAssignedToIdQuery.assignedToId ? `исполнитель задачи: '${queryAssignedTo.fullName}'` : '';
-
-    const pageTitle = _.isEmpty(ctx.query) ? pageTitles.index : `Фильтрация задач по параметрам - ${_.compact([
-      pageTitlePartForTagFiltration,
-      pageTitlePartForStatusFiltration,
-      pageTitlePartForAssignedToFiltration,
-    ]).join('; ')}`;
+      ],
+    });
 
     const taskStatuses = await models.TaskStatus.findAll();
     const users = await models.User.scope('active').findAll();
 
     const viewData = {
-      pageTitle,
-      tasks,
+      pageTitle: ctx.t('page-titles:tasks.index.all'),
+      tasks: await Promise.all(_.invokeMap(filteredTasks, 'reload', { include: [{ all: true }] })),
       taskStatuses,
       users,
     };
@@ -149,56 +74,45 @@ export default (router, models, logger) => {
   });
 
   router.get(
-    'myTasks',
+    'tasksMy',
     '/tasks/my',
+    getAuthorizationMiddleware('tasksMy'),
     async (ctx) => {
       const { currentUser } = ctx.state;
-      const getMyTasksPermission = checkUserPermissions
-        .canUserCreateAndHaveHimselfTasks(currentUser);
-
-      if (!getMyTasksPermission) {
-        ctx.throw(403);
-      }
 
       const createdTasks = await currentUser.getCreatedTasks({ include: [{ all: true }] });
       const assignedTasks = await currentUser.getAssignedTasks({ include: [{ all: true }] });
+
       const taskStatuses = await models.TaskStatus.findAll();
       const users = await models.User.scope('active').findAll();
 
       const viewData = {
-        pageTitle: pageTitles.myTasks,
+        pageTitle: ctx.t('page-titles:tasks.my'),
         taskStatuses,
         users,
         createdTasks,
         assignedTasks,
       };
 
-      ctx.render('tasks/my-tasks.pug', viewData);
+      ctx.render('tasks/my.pug', viewData);
     },
   );
 
   router.get(
-    'newTask',
+    'tasksNew',
     '/tasks/new',
+    getAuthorizationMiddleware('tasksNew'),
     async (ctx) => {
-      const { currentUser } = ctx.state;
-      const createTaskPermission = checkUserPermissions
-        .canUserCreateAndHaveHimselfTasks(currentUser);
-
-      if (!createTaskPermission) {
-        ctx.throw(403);
-      }
-
+      const task = await models.Task.build();
       const taskStatuses = await models.TaskStatus.findAll();
       const users = await models.User.scope('active').findAll();
 
       const viewData = {
-        pageTitle: pageTitles.newTask,
+        pageTitle: ctx.t('page-titles:tasks.new'),
         errors: [],
-        formData: {},
+        task,
         taskStatuses,
         users,
-        fullEditPermission: true,
       };
 
       ctx.render('tasks/new', viewData);
@@ -207,15 +121,9 @@ export default (router, models, logger) => {
 
   router.post(
     '/tasks',
+    getAuthorizationMiddleware('tasksIndex'),
     async (ctx) => {
       const { currentUser } = ctx.state;
-      const createTaskPermission = checkUserPermissions
-        .canUserCreateAndHaveHimselfTasks(currentUser);
-
-      if (!createTaskPermission) {
-        ctx.throw(403);
-      }
-
       const taskData = {
         ...ctx.request.body,
         statusId: ctx.request.body.statusId || models.TaskStatus.defaultValue.id,
@@ -223,75 +131,49 @@ export default (router, models, logger) => {
         creatorId: currentUser.id,
       };
 
-      logger.mainProcessLog('%s | %s | Creating task with parameters:\n%O', ctx.method, ctx.url, taskData);
-
-      const newTask = models.Task.build(taskData);
+      const task = models.Task.build(taskData);
       try {
-        await newTask.save();
+        await task.save();
+
+        await setTagsForTask(ctx.request.body.tags, task);
+
+        ctx.flash = { message: ctx.t('flash-messages:tasks.create', { task }) };
+        makeRedirect(ctx, router.url('tasksIndex'));
       } catch (err) {
-        if (!(err instanceof newTask.sequelize.ValidationError)) {
+        if (!(err instanceof task.sequelize.ValidationError)) {
           throw err;
         }
-        logger.mainProcessLog("%s | %s | Task with name: '%s' has not been created. Validate error:\n%O", ctx.method, ctx.url, ctx.request.body.name, err);
-
         const taskStatuses = await models.TaskStatus.findAll();
         const users = await models.User.scope('active').findAll();
 
         const viewData = {
-          pageTitle: pageTitles.newTask,
+          pageTitle: ctx.t('page-titles:tasks.new'),
           taskStatuses,
           users,
-          fullEditPermission: true,
+          task,
         };
-
         renderFormErrors(ctx, err.errors, 'tasks/new', viewData);
-        return;
       }
-
-      logger.mainProcessLog("%s | %s | Task with name: '%s' has been successful created. Parsing and setting tags for task...", ctx.method, ctx.url, ctx.request.body.name);
-      await setTagsForTask(ctx.request.body.tags, newTask);
-      logger.mainProcessLog("%s | %s | Tags for task with name: '%s' have been successful setted", ctx.method, ctx.url, ctx.request.body.name);
-
-      ctx.flash = { message: `Задача с именем '${newTask.name}' была успешно создана` };
-      makeRedirect(ctx, router.url('tasksIndex'));
     },
   );
 
   router.get(
-    'taskProfile',
+    'tasksProfile',
     '/tasks/:id',
+    getRequestedTaskMiddleware,
+    getAuthorizationMiddleware('tasksProfile'),
     async (ctx) => {
-      const { currentUser } = ctx.state;
-      const requestedTask = await findRequestedTask(ctx);
-      const modifyTaskPermission = checkUserPermissions
-        .canUserModifyTask(currentUser, requestedTask);
-
-      if (!modifyTaskPermission) {
-        ctx.throw(403);
-      }
-
-      const assignedToId = requestedTask.assignedTo
-        ? requestedTask.assignedTo.id : null;
-
-      const formData = {
-        name: requestedTask.name,
-        description: requestedTask.description,
-        assignedToId,
-        statusId: requestedTask.status.id,
-        tags: _(requestedTask.Tags).map('name').join(', '),
-      };
-
+      const { task } = ctx;
       const taskStatuses = await models.TaskStatus.findAll();
       const users = await models.User.scope('active').findAll();
 
       const viewData = {
-        pageTitle: pageTitles.editTask,
+        pageTitle: ctx.t('page-titles:tasks.profile'),
         errors: [],
-        formData,
         taskStatuses,
         users,
-        requestedTask,
-        fullEditPermission: requestedTask.creator.equals(currentUser),
+        task,
+        isUserCreatorForTask,
       };
 
       ctx.render('tasks/profile', viewData);
@@ -300,79 +182,57 @@ export default (router, models, logger) => {
 
   router.patch(
     '/tasks/:id',
+    getRequestedTaskMiddleware,
+    getAuthorizationMiddleware('tasksProfile'),
     async (ctx) => {
       const { currentUser } = ctx.state;
-      const requestedTask = await findRequestedTask(ctx);
-      const modifyTaskPermission = checkUserPermissions
-        .canUserModifyTask(currentUser, requestedTask);
+      const { task } = ctx;
 
-      if (!modifyTaskPermission) {
-        ctx.throw(403);
+      if (ctx.request.body.assignedToId === '') {
+        ctx.request.body.assignedToId = null;
       }
 
-      logger.mainProcessLog("%s | %s | Updating task with name: '%s' to: %o", ctx.method, ctx.url, requestedTask.name, ctx.request.body);
-
-      const normalizeRequestBody = (requestBody) => {
-        if (currentUser.equals(requestedTask.creator)) {
-          return _.omit(requestBody, 'creatorId');
-        }
-
-        return _.pick(requestBody, 'statusId');
-      };
-
-      ctx.request.body = normalizeRequestBody(ctx.request.body);
-
-      logger.mainProcessLog('%s | %s | Modified request body: %o', ctx.method, ctx.url, ctx.request.body);
-
       try {
-        await requestedTask.update(ctx.request.body);
+        await task.update(
+          ctx.request.body,
+          { fields: isUserCreatorForTask(currentUser, task) ? ['name', 'description', 'statusId', 'assignedToId'] : ['statusId'] },
+        );
+
+        await setTagsForTask(ctx.request.body.tags, task);
+
+        ctx.flash = { message: ctx.t('flash-messages:tasks.update', { task }) };
+        makeRedirect(ctx, router.url('tasksIndex'));
       } catch (err) {
-        if (!(err instanceof requestedTask.sequelize.ValidationError)) {
+        if (!(err instanceof task.sequelize.ValidationError)) {
           throw err;
         }
-        logger.mainProcessLog("%s | %s | Task with name: '%s' has not been updated. Validate error:\n%O", ctx.method, ctx.url, requestedTask.name, err);
 
         const taskStatuses = await models.TaskStatus.findAll();
         const users = await models.User.scope('active').findAll();
 
         const viewData = {
-          pageTitle: pageTitles.editTask,
+          pageTitle: ctx.t('page-titles:tasks.profile'),
           taskStatuses,
           users,
-          requestedTask,
-          fullEditPermission: requestedTask.creator.equals(currentUser),
+          task,
+          isUserCreatorForTask,
         };
         renderFormErrors(ctx, err.errors, 'tasks/profile', viewData);
-        return;
       }
-
-      logger.mainProcessLog("%s | %s | Task with name: '%s' has been successful updated. Parsing and setting tags for task...", ctx.method, ctx.url, requestedTask.name);
-      await setTagsForTask(ctx.request.body.tags, requestedTask);
-
-      logger.mainProcessLog("%s | %s | Tags for task with name: '%s' have been successful setted", ctx.method, ctx.url, requestedTask.name);
-
-      ctx.flash = { message: `Задача с именем '${requestedTask.name}' была успешно обновлена` };
-      makeRedirect(ctx, router.url('tasksIndex'));
     },
   );
 
   router.delete(
     '/tasks/:id',
+    getRequestedTaskMiddleware,
+    getAuthorizationMiddleware('tasksProfile'),
     async (ctx) => {
-      const { currentUser } = ctx.state;
-      const requestedTask = await findRequestedTask(ctx);
-      const deleteTaskPermission = checkUserPermissions
-        .canUserDeleteTask(currentUser, requestedTask);
+      const { task } = ctx;
+      const taskName = task.name;
 
-      if (!deleteTaskPermission) {
-        ctx.throw(403);
-      }
+      await task.destroy();
 
-      logger.mainProcessLog("%s | %s | Deleting task with name: '%s'", ctx.method, ctx.url, requestedTask.name);
-      await requestedTask.destroy();
-
-      logger.mainProcessLog("%s | %s | Task with name: '%s' has been successful deleted", ctx.method, ctx.url, requestedTask.name);
-      ctx.flash = { message: `Задача с именем '${requestedTask.name}' была успешно удалена` };
+      ctx.flash = { message: ctx.t('flash-messages:tasks.delete', { taskName }) };
       makeRedirect(ctx, router.url('tasksIndex'));
     },
   );

@@ -1,4 +1,4 @@
-export default (sequelize, DataTypes) => {
+export default i18next => (sequelize, DataTypes) => {
   const Task = sequelize.define('Task', {
     id: {
       type: DataTypes.INTEGER,
@@ -10,7 +10,7 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notEmpty: {
-          msg: 'Название задачи не может быть пустым',
+          msg: i18next.t('validation:Task.name.notEmpty'),
         },
       },
     },
@@ -21,7 +21,7 @@ export default (sequelize, DataTypes) => {
     validate: {
       statusId() {
         if (!this.statusId) {
-          throw new Error('Должен быть указан статус задачи');
+          throw new Error(i18next.t('validation:Task.statusId.notEmpty'));
         }
       },
     },

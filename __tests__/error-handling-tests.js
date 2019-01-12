@@ -21,13 +21,20 @@ beforeAll(async (done) => {
     ctx.status = 204;
   });
 
-  const { logger, sessionParseMiddleware } = await testHelpers.getAppComponents(initApplication());
+  const {
+    logger,
+    sequelize,
+    models,
+    i18next,
+  } = await testHelpers.getAppComponents(initApplication());
 
   const httpServerConfig = {
     router: mockRouter,
-    reportAboutError: mockReportAboutError,
-    sessionParseMiddleware,
+    errorReporting: mockReportAboutError,
     logger,
+    sequelize,
+    models,
+    i18next,
   };
 
   httpServer = initHttpServer(httpServerConfig);

@@ -1,8 +1,4 @@
-import _ from 'lodash';
-
-export const systemTaskStatuses = ['Новая', 'В работе', 'На тестировании', 'Завершена'];
-
-export default (sequelize, DataTypes) => {
+export default i18next => (sequelize, DataTypes) => {
   const TaskStatus = sequelize.define('TaskStatus', {
     id: {
       type: DataTypes.INTEGER,
@@ -15,15 +11,14 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         notEmpty: {
-          msg: 'Название статуса задачи не может быть пустым',
+          msg: i18next.t('validation:TaskStatus.name.notEmpty'),
         },
       },
     },
-  }, {
-    getterMethods: {
-      isBuiltIn() {
-        return _.includes(systemTaskStatuses, this.getDataValue('name'));
-      },
+    isBuiltIn: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   });
 

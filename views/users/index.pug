@@ -4,18 +4,18 @@ mixin userCard(user)
   - const isCurrentUser = (user) => (!!currentUser && currentUser.id === user.id)
   - const borderColor = isCurrentUser(user) ? 'rgba(29, 84, 222, 1)' : 'rgba(0, 235, 8, 1)'
 
-  figure.card.rounded.border-0.mb-4(style=`width: 15rem; height: 10rem; box-shadow: inset 0px 0px 6px 1px ${borderColor};`, class=isCurrentUser(user) ? 'order-1' : 'order-2')
+  figure.card.rounded.border-0.mb-4(style=`width: 17rem; height: 10rem; box-shadow: inset 0px 0px 6px 1px ${borderColor};`, class=isCurrentUser(user) ? 'order-1' : 'order-2')
     .card-body.d-flex.flex-column
       h5.card-title= user.fullName
       h6.card-subtitle.text-muted= user.email
       if isCurrentUser(user)
         p Это вы
-      a.card-link.mt-auto(href=getNamedURL('usersEdit', { id: user.id }))= isCurrentUser(user) ? 'Настройки' : 'Подробнее'
+      a.card-link.mt-auto(href=getNamedURL('usersProfile', { id: user.id }))= isCurrentUser(user) ? 'Настройки' : 'Подробнее'
 
 block content
   h2.text-center.mt-4= pageTitle
   .container.d-flex.mt-4.justify-content-around.flex-wrap
-    each user in usersList
+    each user in users
       +userCard(user)
     else
       .mx-auto(style='font-size: 1.1rem;') В системе пока еще нет пользователей

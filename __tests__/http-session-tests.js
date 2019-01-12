@@ -30,7 +30,7 @@ describe("Session's routes", () => {
   });
 
   test('Get page for user sign in (create new session)', async () => {
-    const response = await request(httpServer.getRequestHandler()).get(router.url('newSession'));
+    const response = await request(httpServer.getRequestHandler()).get(router.url('sessionNew'));
     expect(response.status).toBe(200);
   });
 
@@ -61,7 +61,7 @@ describe("Session's routes", () => {
     sessionCookie = deleteSessionResponse.header['set-cookie'];
 
     const deleteUserResponse = await request(httpServer.getRequestHandler())
-      .delete(router.url('userProfile', { id: user.id }))
+      .delete(router.url('usersProfile', { id: user.id }))
       .set('Cookie', sessionCookie);
     expect(deleteUserResponse.status).toBe(403);
   });
@@ -76,24 +76,26 @@ describe("Check mechanism of session's expiration", () => {
 
   beforeAll(async (done) => {
     const {
-      database,
+      sequelize,
       logger,
       models,
       router,
-      sessionParseMiddleware,
-      sessionConfig,
-      reportAboutError,
+      httpSessionConfig,
+      errorReporting,
+      i18next,
     } = await testHelpers.getAppComponents(initApplication());
     routing = router;
 
-    const mockSessionConfig = { ...sessionConfig, maxAge: 300 };
+    const mockSessionConfig = { ...httpSessionConfig, maxAge: 300 };
 
     const server = initHttpServer({
       router,
       logger,
-      reportAboutError,
-      sessionParseMiddleware,
-      sessionConfig: mockSessionConfig,
+      errorReporting,
+      httpSessionConfig: mockSessionConfig,
+      i18next,
+      sequelize,
+      models,
     });
 
     mockHttpServer = {
@@ -101,7 +103,7 @@ describe("Check mechanism of session's expiration", () => {
         server.listen(...args);
       },
       async close(...args) {
-        await database.close();
+        await sequelize.close();
         server.close(...args);
       },
       getRequestHandler() {
@@ -128,7 +130,7 @@ describe("Check mechanism of session's expiration", () => {
 
     setTimeout(async () => {
       const userDeleteResponse = await request(mockHttpServer.getRequestHandler())
-        .delete(routing.url('userProfile', { id: user.id }))
+        .delete(routing.url('usersProfile', { id: user.id }))
         .set('Cookie', sessionCookie);
       expect(userDeleteResponse.status).toBe(403);
       done();
@@ -140,7 +142,7 @@ describe("Check mechanism of session's expiration", () => {
 
     setTimeout(async () => {
       const userDeleteResponse = await request(mockHttpServer.getRequestHandler())
-        .delete(routing.url('userProfile', { id: user.id }))
+        .delete(routing.url('usersProfile', { id: user.id }))
         .set('Cookie', sessionCookie);
       expect(userDeleteResponse.status).toBe(303);
       done();

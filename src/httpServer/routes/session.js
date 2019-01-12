@@ -2,10 +2,6 @@ import encrypt from '../../lib/secure';
 import makeRedirect from './helpers/redirect';
 import renderFormErrors from './helpers/form-errors-render';
 
-const pageTitles = {
-  newSession: 'Вход',
-};
-
 const isCorrectPassword = (password, userForAuthentication) => (
   !!userForAuthentication
   && (userForAuthentication.passwordHash === encrypt(password))
@@ -19,43 +15,39 @@ export const clearSession = (ctx) => {
   ctx.session = {};
 };
 
-export default (router, models, logger) => {
-  router.get('newSession', '/session/new', (ctx) => {
-    const viewData = { pageTitle: pageTitles.newSession, errors: [], formData: [] };
+export default (router, models) => {
+  router.get('sessionNew', '/session/new', (ctx) => {
+    const viewData = { pageTitle: ctx.t('page-titles:session.new'), errors: [], formData: {} };
     ctx.render('session/new', viewData);
   });
 
   router.post('session', '/session', async (ctx) => {
     const { email, password } = ctx.request.body;
-    logger.mainProcessLog('%s | %s | Attempt sign in for user with email: %s', ctx.method, ctx.url, email);
 
     const userForAuthentication = await models.User.findOne({ where: { email } });
 
     if (!isCorrectPassword(password, userForAuthentication)) {
-      logger.mainProcessLog("%s | %s | User with email: '%s' couldn't sign in. Invalid email/password combination", ctx.method, ctx.url, email);
-      const error = new Error('Неверная комбинация email и пароля. Попробуйте еще раз');
-      renderFormErrors(ctx, [error], 'session/new', { pageTitle: pageTitles.newSession });
+      const error = new Error(ctx.t('validation:Session.email-password-combination'));
+      const viewData = { pageTitle: ctx.t('page-titles:session.new'), formData: { email, password } };
+      renderFormErrors(ctx, [error], 'session/new', viewData);
       return;
     }
 
     userSignIn(ctx, userForAuthentication);
 
     if (userForAuthentication.isActive) {
-      logger.mainProcessLog("%s | %s | User with email: '%s' successful sign in", ctx.method, ctx.url, email);
-      ctx.flash = { message: 'Вы успешно вошли в систему' };
+      ctx.flash = { message: ctx.t('flash-messages:session.userSignIn') };
       makeRedirect(ctx, router.url('index'));
       return;
     }
 
-    logger.mainProcessLog("%s | %s | User with email: '%s' is deleted. It can be restored", ctx.method, ctx.url, email);
-    makeRedirect(ctx, router.url('userQueryToRestore', { id: userForAuthentication.id }));
+    makeRedirect(ctx, router.url('usersQueryToRestore', { id: userForAuthentication.id }));
   });
 
   router.delete('/session', async (ctx) => {
     clearSession(ctx);
-    logger.mainProcessLog('%s | %s | Session has been cleared', ctx.method, ctx.url);
 
-    ctx.flash = { message: 'Вы успешно вышли из системы' };
+    ctx.flash = { message: ctx.t('flash-messages:session.userSignOut') };
     makeRedirect(ctx, router.url('index'));
   });
 

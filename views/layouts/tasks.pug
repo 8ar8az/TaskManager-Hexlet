@@ -18,12 +18,12 @@ mixin taskCard(task)
       li.list-group-item
         | Задача создана:
         |
-        a(href=getNamedURL('userProfile', { id: task.creator.id }))= task.creator.fullName
+        a(href=getNamedURL('usersProfile', { id: task.creator.id }))= task.creator.fullName
       li.list-group-item
         | Исполнитель:
         |
         if task.assignedTo
-          a(href=getNamedURL('userProfile', { id: task.assignedTo.id }))= task.assignedTo.fullName
+          a(href=getNamedURL('usersProfile', { id: task.assignedTo.id }))= task.assignedTo.fullName
       li.list-group-item
         | Статус:
         |
@@ -42,7 +42,7 @@ mixin taskCard(task)
             - i++
         if canCurrentUserModifyTask(task)
           .col-12.col-lg-3.text-right
-            a.btn.btn-primary(href=getNamedURL('taskProfile', { id: task.id })) Редактировать
+            a.btn.btn-primary(href=getNamedURL('tasksProfile', { id: task.id })) Редактировать
 
 block content
   -
@@ -70,8 +70,8 @@ block content
       ul.list-group
         a.list-group-item.list-group-item-action.list-group-item-danger(href=getNamedURL('tasksIndex')) Все задачи
         if currentUser
-          a.list-group-item.list-group-item-action.list-group-item-success(href=getNamedURL('myTasks')) Мои задачи
-          a.list-group-item.list-group-item-action.list-group-item-primary(href=getNamedURL('newTask')) Новая задача
+          a.list-group-item.list-group-item-action.list-group-item-success(href=getNamedURL('tasksMy')) Мои задачи
+          a.list-group-item.list-group-item-action.list-group-item-primary(href=getNamedURL('tasksNew')) Новая задача
         each menuBlock in menuBlocksForSearchData
           +menuBlockForSearch(menuBlock.headerText)(class=menuBlock.class)
             case menuBlock.name

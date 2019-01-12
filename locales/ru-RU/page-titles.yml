@@ -1,0 +1,34 @@
+---
+
+index: Главная
+
+session:
+  new: Вход
+
+users:
+  index: Список пользователей
+  new: Регистрация нового пользователя
+  profile:
+    my: Мой профиль
+    user: Профиль пользователя '{{user.fullName}}'
+  restore: Восстановление аккаунта
+
+taskStatuses:
+  index: Центр управления статусами задач
+
+tasks:
+  index:
+    all: Центр управления задачами
+    tagFilter: "тег: '{{tagName}}'"
+    statusFilter: "статус: '{{taskStatus.name}}'"
+    assignedToFilter: "исполнитель: '{{user.fullName}}'"
+    prefix: Фильтрация задач по параметрам
+  my: Мои задачи
+  new: Создание новой задачи
+  profile: Профиль задачи
+
+errors:
+  404: Ресурс не найден
+  403: Доступ запрещен
+  500: Что-то пошло не так
+

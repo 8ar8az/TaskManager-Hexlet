@@ -3,16 +3,16 @@ mixin taskForm(metd, url)
 
   form.mt-3.border.rounded.p-3(action=url, method=metd, style=`box-shadow: 0px 0px 3px 1px ${borderColor};`)
     .form-group.row
-      - const nameError = _.find(errors, { field: 'name' });
+      - const nameError = _.find(errors, { path: 'name' });
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='name') Название:
       .col-12.col-md-9.col-lg-10
-        input#name.form-control(type='text', name='name', value=formData.name, class={ 'is-invalid': !!nameError }, required, readonly=!fullEditPermission)
+        input#name.form-control(type='text', name='name', value=task.name, class={ 'is-invalid': !!nameError }, required, readonly=!fullEditPermission)
         if nameError
           .invalid-feedback= nameError.message
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='description') Описание:
       .col-12.col-md-9.col-lg-10
-        textarea#description.form-control(rows='3', readonly=!fullEditPermission, name='description')= formData.description
+        textarea#description.form-control(rows='3', readonly=!fullEditPermission, name='description')= task.description
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='assignedToId') Исполнитель:
       .col-12.col-md-9.col-lg-10
@@ -20,20 +20,20 @@ mixin taskForm(metd, url)
           option(disabled) Выберите исполнителя
           option(value='') Без исполнителя
           each user in users
-            option(value=user.id, selected=(formData.assignedToId === user.id))= user.fullName
+            option(value=user.id, selected=(task.assignedToId === user.id))= user.fullName
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='statusId') Статус:
-      - const statusError = _.find(errors, { field: 'statusId' });
+      - const statusError = _.find(errors, { path: 'statusId' });
       .col-12.col-md-9.col-lg-10
         select#statusId.form-control(name='statusId', class={ 'is-invalid': !!statusError }, required)
           option(disabled) Выберите статус
           each status in taskStatuses
-            option(value=status.id, selected=(formData.statusId === status.id))= status.name
+            option(value=status.id, selected=(task.statusId === status.id))= status.name
         if statusError
           .invalid-feedback= statusError.message
     .form-group.row
       label.col-12.col-md-3.col-lg-2.col-form-label.text-md-right(for='tags') Теги:
       .col-12.col-md-9.col-lg-10
-        input#tags.form-control(type='text', name='tags', value=formData.tags, readonly=!fullEditPermission)
+        input#tags.form-control(type='text', name='tags', value=_(task.Tags).map('name').join(', '), readonly=!fullEditPermission)
         small.form-text.text-muted Перечислите теги, связанные с задачей через запятую
     block

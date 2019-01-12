@@ -1,4 +1,4 @@
-export default (sequelize, DataTypes) => {
+export default () => (sequelize, DataTypes) => {
   const Tag = sequelize.define('Tag', {
     id: {
       type: DataTypes.INTEGER,

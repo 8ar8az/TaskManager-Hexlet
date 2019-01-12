@@ -3,9 +3,9 @@ extends /main.pug
 include ../forms/user-data-form.pug
 
 block content
+  - const editPermission = isSameUser(currentUser, user)
   h2.text-center.mt-4= pageTitle
-  - const formActionURL = editPermission ? getNamedURL('userProfile', { id: currentUser.id }, { query: { _method: 'patch' } }) : ''
-  +userForm('post', formActionURL)
+  +userForm('post', getNamedURL('usersProfile', { id: user.id }, { query: { _method: 'patch' } }))
     if editPermission
       .row
         .col-12.col-md-9.col-lg-10.ml-auto
@@ -13,4 +13,4 @@ block content
             .col-12.col-md-5.mb-1
               button.btn.btn-primary.btn-block(type='submit') Обновить профиль
             .col-12.col-md-5.mb-1
-              button.btn.btn-danger.btn-block(type='submit', formaction=getNamedURL('userProfile', { id: currentUser.id }, { query: { _method: 'delete' } })) Удалить профиль
+              button.btn.btn-danger.btn-block(type='submit', formaction=getNamedURL('usersProfile', { id: user.id }, { query: { _method: 'delete' } })) Удалить профиль

@@ -27,23 +27,23 @@ const userSingIn = async (httpServer, user, password) => {
 };
 
 const getAppComponents = async (appContainer) => {
-  const { logger, reportAboutError } = appContainer;
-  const database = await appContainer.database;
+  const { logger, errorReporting } = appContainer;
+  const sequelize = await appContainer.sequelize;
   const models = await appContainer.models;
-  const sessionConfig = await appContainer.sessionConfig;
-  const sessionParseMiddleware = await appContainer.sessionParseMiddleware;
+  const httpSessionConfig = await appContainer.httpSessionConfig;
   const router = await appContainer.router;
   const httpServer = await appContainer.httpServer;
+  const i18next = await appContainer.i18next;
 
   return {
     logger,
-    reportAboutError,
-    database,
+    errorReporting,
+    sequelize,
     models,
-    sessionConfig,
-    sessionParseMiddleware,
+    httpSessionConfig,
     router,
     httpServer,
+    i18next,
   };
 };
 

@@ -3,6 +3,7 @@ extends /main.pug
 include ../forms/user-data-form.pug
 
 block content
+  - const editPermission = true
   h2.text-center.mt-4= pageTitle
   +userForm('post', getNamedURL('usersIndex'))
     .row

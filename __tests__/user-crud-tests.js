@@ -49,7 +49,7 @@ describe('Create user', () => {
   });
 
   test('Attempt to get page for create user', async () => {
-    const response = await request(httpServer.getRequestHandler()).get(router.url('newUser'));
+    const response = await request(httpServer.getRequestHandler()).get(router.url('usersNew'));
     expect(response.status).toBe(200);
   });
 
@@ -117,13 +117,13 @@ describe('Update user', () => {
 
   test("Get page with user's data which is exist", async () => {
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('userProfile', { id: user1.id }));
+      .get(router.url('usersProfile', { id: user1.id }));
     expect(response.status).toBe(200);
   });
 
   test("Get page with user's data which is not exist", async () => {
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('userProfile', { id: -999 }));
+      .get(router.url('usersProfile', { id: -999 }));
     expect(response.status).toBe(404);
   });
 
@@ -131,7 +131,7 @@ describe('Update user', () => {
     const newUserData = testHelpers.generateUserData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('userProfile', { id: user1.id }))
+      .patch(router.url('usersProfile', { id: user1.id }))
       .type('form')
       .send(newUserData);
     expect(response.status).toBe(403);
@@ -145,7 +145,7 @@ describe('Update user', () => {
     const newUserData = testHelpers.generateUserData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('userProfile', { id: user2.id }))
+      .patch(router.url('usersProfile', { id: user2.id }))
       .type('form')
       .send(newUserData);
     expect(response.status).toBe(403);
@@ -158,7 +158,7 @@ describe('Update user', () => {
     const newUserData = testHelpers.generateUserData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('userProfile', { id: user1.id }))
+      .patch(router.url('usersProfile', { id: user1.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send(newUserData);
@@ -172,7 +172,7 @@ describe('Update user', () => {
     const newUserData = testHelpers.generateUserData();
 
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('userProfile', { id: user1.id }))
+      .patch(router.url('usersProfile', { id: user1.id }))
       .type('form')
       .set('Cookie', sessionCookie)
       .send({ ...newUserData, email: 'wrongEmail' });
@@ -218,14 +218,14 @@ describe('Delete user', () => {
     sessionCookie = await testHelpers.userSingIn(httpServer, user1, user1Password);
 
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('userProfile', { id: -999 }))
+      .delete(router.url('usersProfile', { id: -999 }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(404);
   });
 
   test('Attempt to delete user without logged user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('userProfile', { id: user1.id }));
+      .delete(router.url('usersProfile', { id: user1.id }));
     expect(response.status).toBe(403);
 
     await user1.reload();
@@ -234,7 +234,7 @@ describe('Delete user', () => {
 
   test('Attempt to delete user data with logged user, but deleted user is not same that logged user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('userProfile', { id: user2.id }))
+      .delete(router.url('usersProfile', { id: user2.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(403);
 
@@ -244,7 +244,7 @@ describe('Delete user', () => {
 
   test('Attempt to delete user with logged user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .delete(router.url('userProfile', { id: user1.id }))
+      .delete(router.url('usersProfile', { id: user1.id }))
       .set('Cookie', sessionCookie);
     expect(response.status).toBe(303);
 
@@ -283,19 +283,19 @@ describe('Restore deleted user', () => {
 
   test('Appempt to get user profile for deleted user', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('userProfile', { id: user.id }));
+      .get(router.url('usersProfile', { id: user.id }));
     expect(response.status).toBe(404);
   });
 
   test("Attempt to get user's restore page without authentication", async () => {
     const response = await request(httpServer.getRequestHandler())
-      .get(router.url('userQueryToRestore', { id: user.id }));
+      .get(router.url('usersQueryToRestore', { id: user.id }));
     expect(response.status).toBe(403);
   });
 
   test('Attempt to restore user without preliminary authentication', async () => {
     const response = await request(httpServer.getRequestHandler())
-      .patch(router.url('userRestore', { id: user.id }));
+      .patch(router.url('usersRestore', { id: user.id }));
     expect(response.status).toBe(403);
   });
 
@@ -303,12 +303,12 @@ describe('Restore deleted user', () => {
     const sessionCookie = await testHelpers.userSingIn(httpServer, user, userPassword);
 
     const pageWithRestoreConfirmationResponse = await request(httpServer.getRequestHandler())
-      .get(router.url('userQueryToRestore', { id: user.id }))
+      .get(router.url('usersQueryToRestore', { id: user.id }))
       .set('Cookie', sessionCookie);
     expect(pageWithRestoreConfirmationResponse.status).toBe(200);
 
     const userRestoreResponse = await request(httpServer.getRequestHandler())
-      .patch(router.url('userRestore', { id: user.id }))
+      .patch(router.url('usersRestore', { id: user.id }))
       .set('Cookie', sessionCookie);
     expect(userRestoreResponse.status).toBe(303);
 

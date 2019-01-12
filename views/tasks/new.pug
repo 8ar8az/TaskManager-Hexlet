@@ -3,6 +3,7 @@ extends /main.pug
 include ../forms/task-data-form.pug
 
 block content
+  - const fullEditPermission = true
   h2.text-center.mt-4= pageTitle
   +taskForm('post', getNamedURL('tasksIndex'))
     .row

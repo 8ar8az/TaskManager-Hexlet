@@ -8,15 +8,20 @@ import session from 'koa-session2';
 import Pug from 'koa-pug';
 import methodoverride from 'koa-methodoverride';
 import flash from 'koa-flash';
+import koaI18next from 'koa-i18next';
 import _ from 'lodash';
+
 import getErrorHandlingMiddleware from './middlwares/error-handling';
+import getSessionParseMiddleware from './middlwares/session-parse';
 
 export default ({
   router,
-  sessionParseMiddleware,
-  sessionConfig,
-  reportAboutError,
+  sequelize,
+  models,
+  httpSessionConfig,
   logger,
+  errorReporting,
+  i18next,
 }) => {
   const staticFilesPath = path.resolve(__dirname, '..', '..', 'public');
 
@@ -26,6 +31,7 @@ export default ({
   };
 
   const pugConfig = {
+    debug: true,
     viewPath: path.resolve(__dirname, '..', '..', 'views'),
     noCache: process.env.NODE_ENV !== 'production',
     basedir: path.resolve(__dirname, '..', '..', 'views', 'layouts'),
@@ -40,14 +46,19 @@ export default ({
 
   app.keys = [process.env.SECRET_KEY || 'abcdef'];
 
-  app.use(getErrorHandlingMiddleware(logger));
   app.use(koaLogger());
+  app.use(koaI18next(i18next, { next: true }));
+  app.use(getErrorHandlingMiddleware(sequelize, errorReporting, logger));
   app.use(serve(staticFilesPath));
-  app.use(session(sessionConfig));
-  app.use(flash());
-  app.use(sessionParseMiddleware);
   app.use(koaBody(koaBodyConfig));
+  app.use(async (ctx, next) => {
+    logger.log('Request body: %o', ctx.request.body);
+    await next();
+  });
   app.use(methodoverride('_method'));
+  app.use(session(httpSessionConfig));
+  app.use(flash());
+  app.use(getSessionParseMiddleware(models));
   app.use(router.routes());
   app.use(router.allowedMethods());
   app.use(async (ctx) => {
@@ -55,11 +66,6 @@ export default ({
   });
 
   pug.use(app);
-
-  app.on('error', (err, ctx) => {
-    logger.errorReportingLog('Reporting about uncaught error:\n%O', err);
-    reportAboutError(err, ctx.request);
-  });
 
   const httpServer = http.createServer(app.callback());
   return httpServer;
