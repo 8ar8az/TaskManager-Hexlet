@@ -62,7 +62,7 @@
     "i18next": "^13.1.2",
     "i18next-node-fs-backend": "^2.1.1",
     "javascript-state-machine": "^3.1.0",
-    "jquery": "^3.3.1",
+    "jquery": "^3.5.0",
     "koa": "^2.6.2",
     "koa-body": "^4.0.4",
     "koa-flash": "^1.0.0",
